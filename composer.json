@@ -1,0 +1,35 @@
+{
+  "name": "workbunny/webman-shared-cache",
+  "type": "library",
+  "license": "MIT",
+  "description": "Webman plugin workbunny/webman-shared-cache",
+  "authors": [
+    {
+      "name": "chaz6chez",
+      "email": "chaz6chez1993@qoutlook.com",
+      "homepage": "https://chaz6chez.cn"
+    }
+  ],
+  "support": {
+    "issues": "https://github.com/workbunny/webman-shared-cache/issues",
+    "source": "https://github.com/workbunny/webman-shared-cache"
+  },
+  "require": {
+    "php": "^8.1",
+    "ext-apcu": "*"
+  },
+  "require-dev": {
+    "symfony/var-dumper": "^6.0",
+    "phpunit/phpunit": "^9.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "Workbunny\\WebmanSharedCache\\": "src"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Workbunny\\WebmanSharedCache\\Tests\\": "tests"
+    }
+  }
+}
