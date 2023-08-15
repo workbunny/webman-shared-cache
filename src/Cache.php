@@ -1,10 +1,11 @@
 <?php declare(strict_types=1);
 
-namespace support\shared;
+namespace Workbunny\WebmanSharedCache;
 
 use APCUIterator;
 use Closure;
 use Error;
+use const APC_ITER_ALL;
 
 /**
  * 基于APCu的进程共享内存
@@ -12,14 +13,23 @@ use Error;
  * @method static bool Set(string $key, mixed $value, array $optional = []) 设置缓存值
  * @method static mixed Get(string $key, mixed $default = null) 获取缓存值
  * @method static bool Del(string ...$keys) 移除缓存
- * @method static array Exists(string ...$keys) 判断缓存
- * @method static array Keys(null|string $regex = null) 获取缓存键 - 正则匹配
+ * @method static array Keys(null|string $regex = null) 获取缓存键
+ * @method static array Exists(string ...$keys) 判断缓存键
+ *
+ * @method static bool HSet(string $key, string|int $hashKey, mixed $hashValue) Hash 设置
+ * @method static bool HDel(string $key, string|int ...$hashKey) Hash 移除
+ * @method static mixed HGet(string $key, string|int $hashKey, mixed $default = null) Hash 获取
+ * @method static array HKeys(string $key, null|string $regex = null) Hash keys
+ * @method static array HExists(string $key, string|int ...$hashKey) Hash key 判断
+ *
  * @method static void Search(string $regex, Closure $handler, int $chunkSize = 100) 搜索键值 - 正则匹配
+ * @method static array LockInfo() 获取锁信息
  * @method static bool Clear() 清理所有缓存
  */
 class Cache
 {
-    const LOCK = '#internal-lock#';
+    /** @var string 写锁 */
+    const LOCK = '#write-lock#';
 
     /** @var bool 忽略使用 */
     public static bool $ignore = true;
@@ -30,10 +40,16 @@ class Cache
      * @link self::_Set() Set()
      * @link self::_Get() Get()
      * @link self::_Del() Del()
-     * @link self::_Exists() Exists()
-     * @link self::_Search() Search()
      * @link self::_Keys() Keys()
+     * @link self::_Exists() Exists()
+     * @link self::_HSet() HSet()
+     * @link self::_HGet() HGet()
+     * @link self::_HDel() HDel()
+     * @link self::_HKeys() HKeys()
+     * @link self::_HExists() HExists()
+     * @link self::_Search() Search()
      * @link self::_Clear() Clear()
+     * @link self::_LockInfo() LockInfo()
      * @param string $name
      * @param array $arguments
      * @return mixed
@@ -74,6 +90,7 @@ class Cache
      * 设置缓存
      *  - NX和XX将会阻塞直至成功
      *  - 阻塞最大时长受fuse保护，默认60s
+     *  - 抢占式锁
      *
      * @param string $key
      * @param mixed $value
@@ -181,11 +198,138 @@ class Cache
      */
     private static function _Search(string $regex, Closure $handler, int $chunkSize = 100): void
     {
-        $iterator = new APCUIterator($regex, \APC_ITER_ALL, $chunkSize);
+        $iterator = new APCUIterator($regex, APC_ITER_ALL, $chunkSize);
         while ($iterator->valid()) {
             call_user_func($handler, $iterator->current());
             $iterator->next();
         }
+    }
+
+    /**
+     * hash 设置
+     *  - 阻塞最大时长受fuse保护，默认60s
+     *  - 抢占式锁
+     *
+     * @param string $key
+     * @param string|int $hashKey
+     * @param mixed $hashValue
+     * @return bool
+     */
+    private static function _HSet(string $key, string|int $hashKey, mixed $hashValue): bool
+    {
+        $startTime = time();
+        $blocking = true;
+        while ($blocking) {
+            // 创建锁
+            apcu_entry(self::LOCK, function () use ($key, $hashKey, $hashValue, &$blocking) {
+                $blocking = false;
+                $hash = self::Get($key, []);
+                $hash[$hashKey] = $hashValue;
+                self::Set($key, $hash);
+                return [
+                    'timestamp' => microtime(true),
+                    'method'    => __FUNCTION__,
+                    'params'    => func_get_args()
+                ];
+            });
+            // 移除锁
+            if ($blocking) {
+                self::Del(self::LOCK);
+            }
+            // 阻塞保险
+            if (time() >= $startTime + self::$fuse) {return false;}
+        }
+        return true;
+    }
+
+    /**
+     * hash 移除
+     *  - 阻塞最大时长受fuse保护，默认60s
+     *  - 抢占式锁
+     *
+     * @param string $key
+     * @param string|int ...$hashKey
+     * @return bool
+     */
+    private static function _HDel(string $key, string|int ...$hashKey): bool
+    {
+        $startTime = time();
+        $blocking = true;
+        while ($blocking) {
+            // 创建锁
+            apcu_entry(self::LOCK, function () use ($key, $hashKey, &$blocking) {
+                $blocking = false;
+                $hash = self::Get($key, []);
+                foreach ($hashKey as $hk) {
+                    unset($hash[$hk]);
+                }
+                self::Set($key, $hash);
+                return [
+                    'timestamp' => microtime(true),
+                    'method'    => __FUNCTION__,
+                    'params'    => func_get_args()
+                ];
+            });
+            // 移除锁
+            if ($blocking) {
+                self::Del(self::LOCK);
+            }
+            // 阻塞保险
+            if (time() >= $startTime + self::$fuse) {return false;}
+        }
+        return true;
+    }
+
+    /**
+     * hash 获取
+     *
+     * @param string $key
+     * @param string|int $hashKey
+     * @param mixed|null $default
+     * @return mixed
+     */
+    private static function _HGet(string $key, string|int $hashKey, mixed $default = null): mixed
+    {
+        $hash = self::Get($key, []);
+        return $hash[$hashKey] ?? $default;
+    }
+
+    /**
+     * hash key 判断
+     *
+     * @param string $key
+     * @param string|int ...$hashKey
+     * @return array
+     */
+    private static function _HExists(string $key, string|int ...$hashKey): array
+    {
+        $hash = self::Get($key, []);
+        $result = [];
+        foreach ($hashKey as $hk) {
+            if (isset($hash[$hk])) {
+                $result[$hk] = true;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * hash keys
+     *
+     * @param string $key
+     * @param string|null $regex
+     * @return array
+     */
+    private static function _HKeys(string $key, null|string $regex = null): array
+    {
+        $hash = self::Get($key, []);
+        $keys = array_keys($hash);
+        if ($regex !== null) {
+            $keys = array_values(array_filter($keys, function($key) use ($regex) {
+                return preg_match($regex, $key);
+            }));
+        }
+        return $keys;
     }
 
     /**
@@ -196,5 +340,19 @@ class Cache
     private static function _Clear(): bool
     {
         return apcu_clear_cache();
+    }
+
+    /**
+     * 获取锁信息
+     *
+     * @return array = [
+     *  'timestamp' => float,
+     *  'method'    => string,
+     *  'params'    => array,
+     * ]
+     */
+    private static function _LockInfo(): array
+    {
+        return self::Get(self::LOCK, []);
     }
 }
