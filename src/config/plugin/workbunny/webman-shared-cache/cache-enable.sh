@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 target=""
 shm_size="1024M"
@@ -49,9 +49,10 @@ done
 
 if [ -z "$target" ]; then
   target="/usr/local/etc/php/conf.d"
-  echo "配置将被创建至 $target，是否继续？(y/n)"
+  echo "配置将被创建至 $target，是否继续？(y/N)"
   read answer
   if [ "$answer" != "y" ]; then
+    echo "已放弃操作. "
     exit 0
   fi
 fi
@@ -66,9 +67,10 @@ apc.shm_size=$shm_size
 EOF
 
 if [ -e "$target/$file_name" ]; then
-  echo "目标位置已经存在配置，是否覆盖？(y/n)"
+  echo "目标位置已经存在配置，是否覆盖？(y/N)"
   read answer
   if [ "$answer" != "y" ]; then
+    echo "已放弃覆盖. "
     exit 0
   fi
 fi

@@ -19,6 +19,7 @@
     "ext-apcu": "*"
   },
   "require-dev": {
+    "workerman/webman-framework": "^1.0",
     "symfony/var-dumper": "^6.0",
     "phpunit/phpunit": "^9.6"
   },
