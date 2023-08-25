@@ -25,6 +25,8 @@ use const APC_ITER_ALL;
  * @method static void Search(string $regex, Closure $handler, int $chunkSize = 100) 搜索键值 - 正则匹配
  * @method static array LockInfo() 获取锁信息
  * @method static bool Clear() 清理所有缓存
+ *
+ * @method static array Info(bool $limited = false) 获取信息
  */
 class Cache
 {
@@ -50,6 +52,7 @@ class Cache
      * @link self::_Search() Search()
      * @link self::_Clear() Clear()
      * @link self::_LockInfo() LockInfo()
+     * @link self::_Info() Info()
      * @param string $name
      * @param array $arguments
      * @return mixed
@@ -178,7 +181,7 @@ class Cache
     {
         $keys = [];
         if ($info = apcu_cache_info()) {
-            $keys = array_column($info['cache_list'] ?? [], 'key');
+            $keys = array_column($info['cache_list'] ?? [], 'info');
             if ($regex !== null) {
                 $keys = array_values(array_filter($keys, function($key) use ($regex) {
                     return preg_match($regex, $key);
@@ -220,8 +223,15 @@ class Cache
         $startTime = time();
         $blocking = true;
         while ($blocking) {
+            // 阻塞保险
+            if (time() >= $startTime + self::$fuse) {
+                self::Del(self::LOCK);
+                return false;
+            }
             // 创建锁
-            apcu_entry(self::LOCK, function () use ($key, $hashKey, $hashValue, &$blocking) {
+            apcu_entry(self::LOCK, function () use (
+                $key, $hashKey, $hashValue, &$blocking
+            ) {
                 $blocking = false;
                 $hash = self::Get($key, []);
                 $hash[$hashKey] = $hashValue;
@@ -232,13 +242,9 @@ class Cache
                     'params'    => func_get_args()
                 ];
             });
-            // 移除锁
-            if ($blocking) {
-                self::Del(self::LOCK);
-            }
-            // 阻塞保险
-            if (time() >= $startTime + self::$fuse) {return false;}
         }
+        // 移除锁
+        self::Del(self::LOCK);
         return true;
     }
 
@@ -256,6 +262,11 @@ class Cache
         $startTime = time();
         $blocking = true;
         while ($blocking) {
+            // 阻塞保险
+            if (time() >= $startTime + self::$fuse) {
+                self::Del(self::LOCK);
+                return false;
+            }
             // 创建锁
             apcu_entry(self::LOCK, function () use ($key, $hashKey, &$blocking) {
                 $blocking = false;
@@ -270,13 +281,9 @@ class Cache
                     'params'    => func_get_args()
                 ];
             });
-            // 移除锁
-            if ($blocking) {
-                self::Del(self::LOCK);
-            }
-            // 阻塞保险
-            if (time() >= $startTime + self::$fuse) {return false;}
         }
+        // 移除锁
+        self::Del(self::LOCK);
         return true;
     }
 
@@ -354,5 +361,16 @@ class Cache
     private static function _LockInfo(): array
     {
         return self::Get(self::LOCK, []);
+    }
+
+    /**
+     * 获取缓存信息
+     *
+     * @param bool $limited
+     * @return array
+     */
+    private static function _Info(bool $limited = false): array
+    {
+        return apcu_cache_info($limited);
     }
 }
