@@ -45,6 +45,12 @@
 ## 安装
 
 1. **自行安装APCu拓展**
+	```shell
+	# 1. pecl安装
+	pecl instanll apcu
+	# 2. 安装器安装【推荐】
+	curl -sSL https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions -o - | sh -s apcu
+	```
 2. 安装composer包
     ```shell
     composer require workbunny/webman-shared-cache
@@ -61,6 +67,10 @@
 ## 使用
 
 - 支持类似Redis的Set/Get/Del HSet/HGet/HDel等功能
+- 支持通配符/正则匹配Search
+- 支持单位为秒的过期时间
+- 支持查看cache信息
+- 其他功能具体可以参看代码注释
 - 支持通配符/正则匹配Search
 - 支持单位为秒的过期时间
 - 支持查看cache信息
