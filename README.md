@@ -66,12 +66,9 @@
 
 ## 使用
 
-- 支持类似Redis的Set/Get/Del HSet/HGet/HDel等功能
+- 支持类似Redis的Set/Get/Del/Keys HSet/HGet/HDel/HKeys等功能
 - 支持通配符/正则匹配Search
 - 支持单位为秒的过期时间
-- 支持查看cache信息
-- 其他功能具体可以参看代码注释
-- 支持通配符/正则匹配Search
-- 支持单位为秒的过期时间
+- 支持储存对象数据
 - 支持查看cache信息
 - 其他功能具体可以参看代码注释
