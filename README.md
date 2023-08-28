@@ -66,9 +66,54 @@
 
 ## 使用
 
-- 支持类似Redis的Set/Get/Del/Keys HSet/HGet/HDel/HKeys等功能
-- 支持通配符/正则匹配Search
-- 支持单位为秒的过期时间
-- 支持储存对象数据
-- 支持查看cache信息
+- 类似Redis的 Set / Get / Del / Keys / Exists / HSet / HGet / HDel / HKeys / HExists 等
+  - 支持储存对象数据
+  - 支持单位为秒的过期时间
+  - 支持XX/NX模式
+  
+- 通配符/正则匹配Search
+  ```php
+  $result = [];
+  # 默认正则匹配 - 以50条为一次分片查询
+  \Workbunny\WebmanSharedCache\Cache::Search('/^abc.+$/', function (array $current) use (&$result) {
+      $result[] = $current;
+  }, 50);
+  
+  # 通配符转正则
+  \Workbunny\WebmanSharedCache\Cache::Search(
+      \Workbunny\WebmanSharedCache\Cache::WildcardToRegex('abc*'),
+      function (array $current) use (&$result) {
+          $result[] = $current;
+      }
+  );
+  ```
+
+- 查看cache信息
+  ```php
+  # 全量数据
+  \Workbunny\WebmanSharedCache\Cache::Info();
+  
+  # 不查询数据
+  \Workbunny\WebmanSharedCache\Cache::Info(true);
+  ```
+  
+- 查看锁信息
+  ```php
+  # Hash数据的处理建立在写锁之上，如需调试，则使用该方法查询锁信息
+  \Workbunny\WebmanSharedCache\Cache::LockInfo();
+  ```
+  
+- 清空cache
+  - 使用Del多参数进行清理
+  ```php
+  # 接受多个参数
+  \Workbunny\WebmanSharedCache\Cache::Del($a, $b, $c, $d);
+  # 接受一个key的数组
+  \Workbunny\WebmanSharedCache\Cache::Del(...$keysArray);
+  ```
+  - 使用Clear进行清理
+  ```php
+  \Workbunny\WebmanSharedCache\Cache::Clear();
+  ```
+  
 - 其他功能具体可以参看代码注释
