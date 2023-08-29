@@ -71,6 +71,7 @@
   - 支持储存对象数据
   - 支持单位为秒的过期时间
   - 支持XX/NX模式
+  - 支持自增/自减
   
 - 通配符/正则匹配Search
   ```php
@@ -103,6 +104,12 @@
   # Hash数据的处理建立在写锁之上，如需调试，则使用该方法查询锁信息
   \Workbunny\WebmanSharedCache\Cache::LockInfo();
   ```
+
+- 查看键信息
+  ```php
+  # 包括锁的一些基础信息
+  \Workbunny\WebmanSharedCache\Cache::KeyInfo('test-key');
+  ```
   
 - 清空cache
   - 使用Del多参数进行清理
@@ -117,4 +124,4 @@
   \Workbunny\WebmanSharedCache\Cache::Clear();
   ```
   
-- 其他功能具体可以参看代码注释
+- 其他功能具体可以参看**代码注释**和**测试用例**
