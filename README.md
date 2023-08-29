@@ -60,8 +60,9 @@
     - 运行
 	```shell
     # 帮助信息
-    ./shard-cache-enable --help
-    # 脚本默认使用sh运行
+    sh ./shard-cache-enable --help
+    # or
+    bash ./shard-cache-enable --help
     ```
 
 ## 使用
