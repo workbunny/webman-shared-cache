@@ -107,7 +107,7 @@
 
 - 查看键信息
   ```php
-  # 包括锁的一些基础信息
+  # 包括键的一些基础信息
   \Workbunny\WebmanSharedCache\Cache::KeyInfo('test-key');
   ```
   
