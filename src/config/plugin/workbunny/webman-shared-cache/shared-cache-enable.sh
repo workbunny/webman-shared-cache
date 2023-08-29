@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 target=""
 shm_size="1024M"

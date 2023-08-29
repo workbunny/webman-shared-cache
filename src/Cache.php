@@ -12,7 +12,7 @@ use const APC_ITER_ALL;
  *
  * @method static bool Set(string $key, mixed $value, array $optional = []) 设置缓存值
  * @method static mixed Get(string $key, mixed $default = null) 获取缓存值
- * @method static bool Del(string ...$keys) 移除缓存
+ * @method static array Del(string ...$keys) 移除缓存
  * @method static array Keys(null|string $regex = null) 获取缓存键
  * @method static array Exists(string ...$keys) 判断缓存键
  *
@@ -33,8 +33,6 @@ class Cache
     /** @var string 写锁 */
     const LOCK = '#write-lock#';
 
-    /** @var bool 忽略使用 */
-    public static bool $ignore = true;
     /** @var int 阻塞保险 */
     public static int $fuse = 60;
 
@@ -60,13 +58,11 @@ class Cache
     public static function __callStatic(string $name, array $arguments)
     {
         if (method_exists(self::class, "_$name")) {
-            if (!self::$ignore) {
-                if (!extension_loaded('apcu')) {
-                    throw new Error('PHP-ext apcu not enable. ');
-                }
-                if (!apcu_enabled()) {
-                    throw new Error('You need run cache-enable.sh. ');
-                }
+            if (!extension_loaded('apcu')) {
+                throw new Error('PHP-ext apcu not enable. ');
+            }
+            if (!apcu_enabled()) {
+                throw new Error('You need run shared-cache-enable.sh. ');
             }
             return call_user_func([self::class, "_$name"], ...$arguments);
         }
@@ -140,7 +136,7 @@ class Cache
      * 判断缓存键
      *
      * @param string ...$key
-     * @return array
+     * @return array returned that contains all existing keys, or an empty array if none exist.
      */
     private static function _Exists(string ...$key): array
     {
@@ -164,11 +160,11 @@ class Cache
      * 移除缓存
      *
      * @param string ...$keys
-     * @return bool
+     * @return array returns list of failed keys.
      */
-    private static function _Del(string ...$keys): bool
+    private static function _Del(string ...$keys): array
     {
-        return (bool)apcu_delete($keys);
+        return apcu_delete($keys);
     }
 
     /**
