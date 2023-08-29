@@ -60,9 +60,9 @@
     - 运行
 	```shell
     # 帮助信息
-    sh ./shard-cache-enable --help
+    sh ./shared-cache-enable.sh --help
     # or
-    bash ./shard-cache-enable --help
+    bash ./shared-cache-enable.sh --help
     ```
 
 ## 使用
