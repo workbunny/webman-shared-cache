@@ -48,7 +48,7 @@
 	```shell
 	# 1. pecl安装
 	pecl instanll apcu
-	# 2. 安装器安装【推荐】
+	# 2. docker中请使用安装器安装
 	curl -sSL https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions -o - | sh -s apcu
 	```
 2. 安装composer包
