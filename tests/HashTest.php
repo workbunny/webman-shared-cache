@@ -134,13 +134,17 @@ class HashTest extends BaseTestCase
         $key = __METHOD__;
         // 在单进程内
         $this->assertFalse(apcu_fetch($key));
-        Cache::HIncr($key, 'a');
+        $this->assertEquals(1, Cache::HIncr($key, 'a'));
         $this->assertEquals([
             'a' => 1
         ], apcu_fetch($key));
-        Cache::HIncr($key, 'a');
+        $this->assertEquals(3, Cache::HIncr($key, 'a', 2));
         $this->assertEquals([
-            'a' => 2
+            'a' => 3
+        ], apcu_fetch($key));
+        $this->assertEquals(4.1, Cache::HIncr($key, 'a', 1.1));
+        $this->assertEquals([
+            'a' => 4.1
         ], apcu_fetch($key));
         // 清理
         apcu_delete($key);
@@ -154,10 +158,16 @@ class HashTest extends BaseTestCase
             'a' => 1
         ], apcu_fetch($key));
         $this->childExec(static function (string $key) {
-            Cache::HIncr($key, 'a');
+            Cache::HIncr($key, 'a',2);
         }, $key);
         $this->assertEquals([
-            'a' => 2
+            'a' => 3
+        ], apcu_fetch($key));
+        $this->childExec(static function (string $key) {
+            Cache::HIncr($key, 'a',1.1);
+        }, $key);
+        $this->assertEquals([
+            'a' => 4.1
         ], apcu_fetch($key));
         // 清理
         apcu_delete($key);
@@ -172,13 +182,17 @@ class HashTest extends BaseTestCase
         $key = __METHOD__;
         // 在单进程内
         $this->assertFalse(apcu_fetch($key));
-        Cache::HDecr($key, 'a');
+        $this->assertEquals(-1, Cache::HDecr($key, 'a'));
         $this->assertEquals([
             'a' => -1
         ], apcu_fetch($key));
-        Cache::HDecr($key, 'a');
+        $this->assertEquals(-3, Cache::HDecr($key, 'a', 2));
         $this->assertEquals([
-            'a' => -2
+            'a' => -3
+        ], apcu_fetch($key));
+        $this->assertEquals(-4.1, Cache::HDecr($key, 'a', 1.1));
+        $this->assertEquals([
+            'a' => -4.1
         ], apcu_fetch($key));
         // 清理
         apcu_delete($key);
@@ -192,10 +206,16 @@ class HashTest extends BaseTestCase
             'a' => -1
         ], apcu_fetch($key));
         $this->childExec(static function (string $key) {
-            Cache::HDecr($key, 'a');
+            Cache::HDecr($key, 'a', 2);
         }, $key);
         $this->assertEquals([
-            'a' => -2
+            'a' => -3
+        ], apcu_fetch($key));
+        $this->childExec(static function (string $key) {
+            Cache::HDecr($key, 'a', 1.1);
+        }, $key);
+        $this->assertEquals([
+            'a' => -4.1
         ], apcu_fetch($key));
         // 清理
         apcu_delete($key);

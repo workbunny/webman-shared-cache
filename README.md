@@ -67,11 +67,16 @@
 
 ## 使用
 
-- 类似Redis的 Set / Get / Del / Keys / Exists / HSet / HGet / HDel / HKeys / HExists 等
-  - 支持储存对象数据
-  - 支持单位为秒的过期时间
-  - 支持XX/NX模式
-  - 支持自增/自减
+- 类似Redis的String【使用方法鱼Redis基本一致】
+  - 支持 Set/Get/Del/Keys/Exists
+  - 支持 Incr/Decr，支持浮点运算
+  - 支持 储存对象数据
+  - 支持 XX/NX模式，支持秒级过期时间
+
+- 类似Redis的Hash【使用方法鱼Redis基本一致】
+  - 支持 HSet/HGet/HDel/HKeys/HExists 
+  - 支持 HIncr/HDecr，支持浮点运算
+  - 支持 储存对象数据
   
 - 通配符/正则匹配Search
   ```php

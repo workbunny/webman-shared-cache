@@ -14,8 +14,8 @@ use const APC_ITER_ALL;
  * @method static mixed Get(string $key, mixed $default = null) 获取缓存值
  * @method static array Del(string ...$keys) 移除缓存
  * @method static array Keys(null|string $regex = null) 获取缓存键
- * @method static bool|int Incr(string $key, int $value = 1, int $ttl = 0) 自增
- * @method static bool|int Decr(string $key, int $value = 1, int $ttl = 0) 自减
+ * @method static bool|int|float Incr(string $key, int|float $value = 1, int $ttl = 0) 自增
+ * @method static bool|int|float Decr(string $key, int|float $value = 1, int $ttl = 0) 自减
  * @method static array Exists(string ...$keys) 判断缓存键
  *
  * @method static void Search(string $regex, Closure $handler, int $chunkSize = 100) 搜索键值 - 正则匹配
@@ -24,8 +24,8 @@ use const APC_ITER_ALL;
  * @method static bool HDel(string $key, string|int ...$hashKey) Hash 移除
  * @method static mixed HGet(string $key, string|int $hashKey, mixed $default = null) Hash 获取
  * @method static array HKeys(string $key, null|string $regex = null) Hash keys
- * @method static bool|int HIncr(string $key, string|int $hashKey, int $value = 1) Hash 自增
- * @method static bool|int HDecr(string $key, string|int $hashKey, int $value = 1) Hash 自减
+ * @method static bool|int|float HIncr(string $key, string|int $hashKey, int|float $value = 1) Hash 自增
+ * @method static bool|int|float HDecr(string $key, string|int $hashKey, int|float $value = 1) Hash 自减
  * @method static array HExists(string $key, string|int ...$hashKey) Hash key 判断
  *
  * @method static array LockInfo() 获取锁信息
@@ -157,11 +157,11 @@ class Cache
      * 自增
      *
      * @param string $key
-     * @param int $value
+     * @param int|float $value
      * @param int $ttl
-     * @return bool|int
+     * @return bool|int|float
      */
-    protected static function _Incr(string $key, int $value = 1, int $ttl = 0): bool|int
+    protected static function _Incr(string $key, int|float $value = 1, int $ttl = 0): bool|int|float
     {
         $startTime = time();
         $blocking = true;
@@ -178,11 +178,9 @@ class Cache
                 $key, $value, $ttl, $func, &$blocking, &$result
             ) {
                 $blocking = false;
-                $v = self::_Get($key);
-                if ($v) {
-                    $result = apcu_inc($key, $value, $r, $ttl);
-                } else {
-                    self::_Set($key, $value, [
+                $v = self::_Get($key, 0);
+                if (is_numeric($v)) {
+                    self::_Set($key, $value = $v + $value, [
                         'EX' => $ttl
                     ]);
                     $result = $value;
@@ -201,11 +199,11 @@ class Cache
 
     /**
      * @param string $key
-     * @param int $value
+     * @param int|float $value
      * @param int $ttl
-     * @return bool|int
+     * @return bool|int|float
      */
-    protected static function _Decr(string $key, int $value = 1, int $ttl = 0): bool|int
+    protected static function _Decr(string $key, int|float $value = 1, int $ttl = 0): bool|int|float
     {
         $startTime = time();
         $blocking = true;
@@ -222,11 +220,9 @@ class Cache
                 $key, $value, $ttl, $func, &$blocking, &$result
             ) {
                 $blocking = false;
-                $v = self::_Get($key);
-                if ($v) {
-                    $result = apcu_dec($key, $value, $r, $ttl);
-                } else {
-                    self::_Set($key, $value = -$value, [
+                $v = self::_Get($key, 0);
+                if (is_numeric($v)) {
+                    self::_Set($key, $value = $v - $value, [
                         'EX' => $ttl
                     ]);
                     $result = $value;
@@ -361,10 +357,10 @@ class Cache
      *
      * @param string $key
      * @param string|int $hashKey
-     * @param mixed $hashValue
-     * @return bool|int
+     * @param int|float $hashValue
+     * @return bool|int|float
      */
-    protected static function _HIncr(string $key, string|int $hashKey, int $hashValue = 1): bool|int
+    protected static function _HIncr(string $key, string|int $hashKey, int|float $hashValue = 1): bool|int|float
     {
         $startTime = time();
         $blocking = true;
@@ -403,10 +399,10 @@ class Cache
      *
      * @param string $key
      * @param string|int $hashKey
-     * @param mixed $hashValue
-     * @return bool|int
+     * @param int|float $hashValue
+     * @return bool|int|float
      */
-    protected static function _HDecr(string $key, string|int $hashKey, int $hashValue = 1): bool|int
+    protected static function _HDecr(string $key, string|int $hashKey, int|float $hashValue = 1): bool|int|float
     {
         $startTime = time();
         $blocking = true;

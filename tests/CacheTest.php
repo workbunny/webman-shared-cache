@@ -106,8 +106,10 @@ class CacheTest extends BaseTestCase
         $this->assertFalse(apcu_fetch($key));
         $this->assertEquals(1, Cache::Incr($key));
         $this->assertEquals(1, apcu_fetch($key));
-        $this->assertEquals(2, Cache::Incr($key));
-        $this->assertEquals(2, apcu_fetch($key));
+        $this->assertEquals(3, Cache::Incr($key, 2));
+        $this->assertEquals(3, apcu_fetch($key));
+        $this->assertEquals(4.1, Cache::Incr($key, 1.1));
+        $this->assertEquals(4.1, apcu_fetch($key));
         // 清理
         apcu_delete($key);
 
@@ -118,9 +120,14 @@ class CacheTest extends BaseTestCase
         }, $key);
         $this->assertEquals(1, apcu_fetch($key));
         $this->childExec(static function (string $key) {
-            Cache::Incr($key);
+            Cache::Incr($key, 2);
         }, $key);
-        $this->assertEquals(2, apcu_fetch($key));
+        $this->assertEquals(3, apcu_fetch($key));
+        $this->childExec(static function (string $key) {
+            Cache::Incr($key, 1.1);
+        }, $key);
+        $this->assertEquals(4.1, apcu_fetch($key));
+
         // 清理
         apcu_delete($key);
     }
@@ -136,8 +143,10 @@ class CacheTest extends BaseTestCase
         $this->assertFalse(apcu_fetch($key));
         $this->assertEquals(-1, Cache::Decr($key));
         $this->assertEquals(-1, apcu_fetch($key));
-        $this->assertEquals(-2, Cache::Decr($key));
-        $this->assertEquals(-2, apcu_fetch($key));
+        $this->assertEquals(-3, Cache::Decr($key, 2));
+        $this->assertEquals(-3, apcu_fetch($key));
+        $this->assertEquals(-4.1, Cache::Decr($key, 1.1));
+        $this->assertEquals(-4.1, apcu_fetch($key));
         // 清理
         apcu_delete($key);
 
@@ -148,9 +157,13 @@ class CacheTest extends BaseTestCase
         }, $key);
         $this->assertEquals(-1, apcu_fetch($key));
         $this->childExec(static function (string $key) {
-            Cache::Decr($key);
+            Cache::Decr($key, 2);
         }, $key);
-        $this->assertEquals(-2, apcu_fetch($key));
+        $this->assertEquals(-3, apcu_fetch($key));
+        $this->childExec(static function (string $key) {
+            Cache::Decr($key, 1.1);
+        }, $key);
+        $this->assertEquals(-4.1, apcu_fetch($key));
         // 清理
         apcu_delete($key);
     }
