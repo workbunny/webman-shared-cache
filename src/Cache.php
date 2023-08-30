@@ -14,19 +14,20 @@ use const APC_ITER_ALL;
  * @method static mixed Get(string $key, mixed $default = null) 获取缓存值
  * @method static array Del(string ...$keys) 移除缓存
  * @method static array Keys(null|string $regex = null) 获取缓存键
- * @method static bool Incr(string $key, int $value = 1, int $ttl = 0) 自增
- * @method static bool Decr(string $key, int $value = 1, int $ttl = 0) 自减
+ * @method static bool|int Incr(string $key, int $value = 1, int $ttl = 0) 自增
+ * @method static bool|int Decr(string $key, int $value = 1, int $ttl = 0) 自减
  * @method static array Exists(string ...$keys) 判断缓存键
+ *
+ * @method static void Search(string $regex, Closure $handler, int $chunkSize = 100) 搜索键值 - 正则匹配
  *
  * @method static bool HSet(string $key, string|int $hashKey, mixed $hashValue) Hash 设置
  * @method static bool HDel(string $key, string|int ...$hashKey) Hash 移除
  * @method static mixed HGet(string $key, string|int $hashKey, mixed $default = null) Hash 获取
  * @method static array HKeys(string $key, null|string $regex = null) Hash keys
- * @method static bool HIncr(string $key, string|int $hashKey, int $value = 1) Hash 自增
- * @method static bool HDecr(string $key, string|int $hashKey, int $value = 1) Hash 自减
+ * @method static bool|int HIncr(string $key, string|int $hashKey, int $value = 1) Hash 自增
+ * @method static bool|int HDecr(string $key, string|int $hashKey, int $value = 1) Hash 自减
  * @method static array HExists(string $key, string|int ...$hashKey) Hash key 判断
  *
- * @method static void Search(string $regex, Closure $handler, int $chunkSize = 100) 搜索键值 - 正则匹配
  * @method static array LockInfo() 获取锁信息
  * @method static array KeyInfo(string $key) 获取键信息
  * @method static array Info(bool $limited = false) 获取信息
@@ -125,7 +126,7 @@ class Cache
      * ]
      * @return bool
      */
-    private static function _Set(string $key, mixed $value, array $optional = []): bool
+    protected static function _Set(string $key, mixed $value, array $optional = []): bool
     {
         $ttl = intval($optional['EX'] ?? (isset($optional['EXAT']) ? ($optional['EXAT'] - time()) : 0));
         if (in_array('NX', $optional)) {
@@ -158,13 +159,14 @@ class Cache
      * @param string $key
      * @param int $value
      * @param int $ttl
-     * @return bool
+     * @return bool|int
      */
-    private static function _Incr(string $key, int $value = 1, int $ttl = 0): bool
+    protected static function _Incr(string $key, int $value = 1, int $ttl = 0): bool|int
     {
         $startTime = time();
         $blocking = true;
         $func = __FUNCTION__;
+        $result = false;
         while ($blocking) {
             // 阻塞保险
             if (time() >= $startTime + self::$fuse) {
@@ -173,16 +175,17 @@ class Cache
             }
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
-                $key, $value, $ttl, $func, &$blocking
+                $key, $value, $ttl, $func, &$blocking, &$result
             ) {
                 $blocking = false;
                 $v = self::_Get($key);
                 if ($v) {
-                    apcu_inc($key, $value, $res, $ttl);
+                    $result = apcu_inc($key, $value, $r, $ttl);
                 } else {
                     self::_Set($key, $value, [
                         'EX' => $ttl
                     ]);
+                    $result = $value;
                 }
                 return [
                     'timestamp' => microtime(true),
@@ -193,20 +196,21 @@ class Cache
         }
         // 移除锁
         self::_Del(self::GetLockKey($key));
-        return true;
+        return $result;
     }
 
     /**
      * @param string $key
      * @param int $value
      * @param int $ttl
-     * @return bool
+     * @return bool|int
      */
-    private static function _Decr(string $key, int $value = 1, int $ttl = 0): bool
+    protected static function _Decr(string $key, int $value = 1, int $ttl = 0): bool|int
     {
         $startTime = time();
         $blocking = true;
         $func = __FUNCTION__;
+        $result = false;
         while ($blocking) {
             // 阻塞保险
             if (time() >= $startTime + self::$fuse) {
@@ -215,16 +219,17 @@ class Cache
             }
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
-                $key, $value, $ttl, $func, &$blocking
+                $key, $value, $ttl, $func, &$blocking, &$result
             ) {
                 $blocking = false;
                 $v = self::_Get($key);
                 if ($v) {
-                    apcu_dec($key, $value, $res, $ttl);
+                    $result = apcu_dec($key, $value, $r, $ttl);
                 } else {
-                    self::_Set($key, -$value, [
+                    self::_Set($key, $value = -$value, [
                         'EX' => $ttl
                     ]);
+                    $result = $value;
                 }
                 return [
                     'timestamp' => microtime(true),
@@ -235,7 +240,7 @@ class Cache
         }
         // 移除锁
         self::_Del(self::GetLockKey($key));
-        return true;
+        return $result;
     }
 
     /**
@@ -244,7 +249,7 @@ class Cache
      * @param string ...$key
      * @return array returned that contains all existing keys, or an empty array if none exist.
      */
-    private static function _Exists(string ...$key): array
+    protected static function _Exists(string ...$key): array
     {
         return apcu_exists($key);
     }
@@ -256,7 +261,7 @@ class Cache
      * @param mixed|null $default
      * @return mixed
      */
-    private static function _Get(string $key, mixed $default = null): mixed
+    protected static function _Get(string $key, mixed $default = null): mixed
     {
         $res = apcu_fetch($key, $success);
         return $success ? $res : $default;
@@ -268,7 +273,7 @@ class Cache
      * @param string ...$keys
      * @return array returns list of failed keys.
      */
-    private static function _Del(string ...$keys): array
+    protected static function _Del(string ...$keys): array
     {
         return apcu_delete($keys);
     }
@@ -279,7 +284,7 @@ class Cache
      * @param string|null $regex
      * @return array
      */
-    private static function _Keys(null|string $regex = null): array
+    protected static function _Keys(null|string $regex = null): array
     {
         $keys = [];
         if ($info = apcu_cache_info()) {
@@ -301,7 +306,7 @@ class Cache
      * @param int $chunkSize
      * @return void
      */
-    private static function _Search(string $regex, Closure $handler, int $chunkSize = 100): void
+    protected static function _Search(string $regex, Closure $handler, int $chunkSize = 100): void
     {
         $iterator = new APCUIterator($regex, APC_ITER_ALL, $chunkSize);
         while ($iterator->valid()) {
@@ -320,7 +325,7 @@ class Cache
      * @param mixed $hashValue
      * @return bool
      */
-    private static function _HSet(string $key, string|int $hashKey, mixed $hashValue): bool
+    protected static function _HSet(string $key, string|int $hashKey, mixed $hashValue): bool
     {
         $startTime = time();
         $blocking = true;
@@ -353,19 +358,18 @@ class Cache
 
     /**
      * hash 自增
-     *  - 阻塞最大时长受fuse保护，默认60s
-     *  - 抢占式锁
      *
      * @param string $key
      * @param string|int $hashKey
      * @param mixed $hashValue
-     * @return bool
+     * @return bool|int
      */
-    private static function _HIncr(string $key, string|int $hashKey, int $hashValue = 1): bool
+    protected static function _HIncr(string $key, string|int $hashKey, int $hashValue = 1): bool|int
     {
         $startTime = time();
         $blocking = true;
         $func = __FUNCTION__;
+        $result = false;
         while ($blocking) {
             // 阻塞保险
             if (time() >= $startTime + self::$fuse) {
@@ -374,12 +378,14 @@ class Cache
             }
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
-                $key, $hashKey, $hashValue, $func, &$blocking
+                $key, $hashKey, $hashValue, $func, &$blocking, &$result
             ) {
                 $blocking = false;
                 $hash = self::_Get($key, []);
-                $hash[$hashKey] = ($hash[$hashKey] ?? 0) + $hashValue;
-                self::_Set($key, $hash);
+                if (is_numeric($v = ($hash[$hashKey] ?? 0))) {
+                    $hash[$hashKey] = $result = $v + $hashValue;
+                    self::_Set($key, $hash);
+                }
                 return [
                     'timestamp' => microtime(true),
                     'method'    => $func,
@@ -389,24 +395,23 @@ class Cache
         }
         // 移除锁
         self::_Del(self::GetLockKey($key));
-        return true;
+        return $result;
     }
 
     /**
      * hash 自减
-     *  - 阻塞最大时长受fuse保护，默认60s
-     *  - 抢占式锁
      *
      * @param string $key
      * @param string|int $hashKey
      * @param mixed $hashValue
-     * @return bool
+     * @return bool|int
      */
-    private static function _HDecr(string $key, string|int $hashKey, int $hashValue = 1): bool
+    protected static function _HDecr(string $key, string|int $hashKey, int $hashValue = 1): bool|int
     {
         $startTime = time();
         $blocking = true;
         $func = __FUNCTION__;
+        $result = false;
         while ($blocking) {
             // 阻塞保险
             if (time() >= $startTime + self::$fuse) {
@@ -415,12 +420,14 @@ class Cache
             }
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
-                $key, $hashKey, $hashValue, $func, &$blocking
+                $key, $hashKey, $hashValue, $func, &$blocking, &$result
             ) {
                 $blocking = false;
                 $hash = self::_Get($key, []);
-                $hash[$hashKey] = ($hash[$hashKey] ?? 0) - $hashValue;
-                self::_Set($key, $hash);
+                if (is_numeric($v = ($hash[$hashKey] ?? 0))) {
+                    $hash[$hashKey] = $result = $v - $hashValue;
+                    self::_Set($key, $hash);
+                }
                 return [
                     'timestamp' => microtime(true),
                     'method'    => $func,
@@ -430,7 +437,7 @@ class Cache
         }
         // 移除锁
         self::_Del(self::GetLockKey($key));
-        return true;
+        return $result;
     }
 
     /**
@@ -442,7 +449,7 @@ class Cache
      * @param string|int ...$hashKey
      * @return bool
      */
-    private static function _HDel(string $key, string|int ...$hashKey): bool
+    protected static function _HDel(string $key, string|int ...$hashKey): bool
     {
         $startTime = time();
         $blocking = true;
@@ -481,7 +488,7 @@ class Cache
      * @param mixed|null $default
      * @return mixed
      */
-    private static function _HGet(string $key, string|int $hashKey, mixed $default = null): mixed
+    protected static function _HGet(string $key, string|int $hashKey, mixed $default = null): mixed
     {
         $hash = self::_Get($key, []);
         return $hash[$hashKey] ?? $default;
@@ -494,7 +501,7 @@ class Cache
      * @param string|int ...$hashKey
      * @return array
      */
-    private static function _HExists(string $key, string|int ...$hashKey): array
+    protected static function _HExists(string $key, string|int ...$hashKey): array
     {
         $hash = self::_Get($key, []);
         $result = [];
@@ -513,7 +520,7 @@ class Cache
      * @param string|null $regex
      * @return array
      */
-    private static function _HKeys(string $key, null|string $regex = null): array
+    protected static function _HKeys(string $key, null|string $regex = null): array
     {
         $hash = self::_Get($key, []);
         $keys = array_keys($hash);
@@ -530,7 +537,7 @@ class Cache
      *
      * @return bool
      */
-    private static function _Clear(): bool
+    protected static function _Clear(): bool
     {
         return apcu_clear_cache();
     }
@@ -544,7 +551,7 @@ class Cache
      *  'params'    => array,
      * ]]
      */
-    private static function _LockInfo(): array
+    protected static function _LockInfo(): array
     {
         $res = [];
         self::_Search(self::WildcardToRegex(self::LOCK . '*'), function (array $current) use (&$res) {
@@ -559,7 +566,7 @@ class Cache
      * @param string $key
      * @return array
      */
-    private static function _KeyInfo(string $key): array
+    protected static function _KeyInfo(string $key): array
     {
         return apcu_key_info($key) ?: [];
     }
@@ -570,7 +577,7 @@ class Cache
      * @param bool $limited
      * @return array
      */
-    private static function _Info(bool $limited = false): array
+    protected static function _Info(bool $limited = false): array
     {
         return apcu_cache_info($limited);
     }

@@ -104,9 +104,9 @@ class CacheTest extends BaseTestCase
         $key = __METHOD__;
         // 在单进程内
         $this->assertFalse(apcu_fetch($key));
-        Cache::Incr($key);
+        $this->assertEquals(1, Cache::Incr($key));
         $this->assertEquals(1, apcu_fetch($key));
-        Cache::Incr($key);
+        $this->assertEquals(2, Cache::Incr($key));
         $this->assertEquals(2, apcu_fetch($key));
         // 清理
         apcu_delete($key);
@@ -134,9 +134,9 @@ class CacheTest extends BaseTestCase
         $key = __METHOD__;
         // 在单进程内
         $this->assertFalse(apcu_fetch($key));
-        Cache::Decr($key);
+        $this->assertEquals(-1, Cache::Decr($key));
         $this->assertEquals(-1, apcu_fetch($key));
-        Cache::Decr($key);
+        $this->assertEquals(-2, Cache::Decr($key));
         $this->assertEquals(-2, apcu_fetch($key));
         // 清理
         apcu_delete($key);

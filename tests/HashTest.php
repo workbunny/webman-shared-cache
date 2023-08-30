@@ -167,7 +167,7 @@ class HashTest extends BaseTestCase
      * @runInSeparateProcess
      * @return void
      */
-    public function testDecr(): void
+    public function testHashDecr(): void
     {
         $key = __METHOD__;
         // 在单进程内
