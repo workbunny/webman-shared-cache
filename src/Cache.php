@@ -19,6 +19,7 @@ use const APC_ITER_ALL;
  * @method static array Exists(string ...$keys) 判断缓存键
  *
  * @method static void Search(string $regex, Closure $handler, int $chunkSize = 100) 搜索键值 - 正则匹配
+ * @method static bool Atomic(string $lockKey, Closure $handler) 原子操作
  *
  * @method static bool HSet(string $key, string|int $hashKey, mixed $hashValue) Hash 设置
  * @method static bool HDel(string $key, string|int ...$hashKey) Hash 移除
@@ -58,6 +59,7 @@ class Cache
      * @link self::_HIncr() HIncr()
      * @link self::_HDecr() HDecr()
      *
+     * @link self::_Atomic() Atomic()
      * @link self::_Search() Search()
      * @link self::_Clear() Clear()
      * @link self::_LockInfo() LockInfo()
@@ -104,6 +106,39 @@ class Cache
         $regex = str_replace('*', '.+', $match);
         $regex = str_replace('?', '.', $regex);
         return '/^' . $regex . '$/';
+    }
+
+    /**
+     * 原子操作
+     *  - 无法对锁本身进行原子性操作
+     *  - 只保证handler是否被原子性触发，对其逻辑是否抛出异常不负责
+     *  - handler尽可能避免超长阻塞
+     *  - lockKey会被自动设置特殊前缀#lock#，可以通过Cache::LockInfo进行查询
+     *
+     * @param string $lockKey
+     * @param Closure $handler
+     * @return bool
+     */
+    protected static function _Atomic(string $lockKey, Closure $handler): bool
+    {
+        $func = __FUNCTION__;
+        $result = false;
+        // 创建锁
+        apcu_entry($lock = self::GetLockKey($lockKey), function () use (
+            $lockKey, $handler, $func, &$result
+        ) {
+            call_user_func($handler);
+            $result = true;
+            return [
+                'timestamp' => microtime(true),
+                'method'    => $func,
+                'params'    => func_get_args()
+            ];
+        });
+        if ($result) {
+            self::_Del($lock);
+        }
+        return $result;
     }
 
     /**
