@@ -19,7 +19,7 @@ use const APC_ITER_ALL;
  * @method static array Exists(string ...$keys) 判断缓存键
  *
  * @method static void Search(string $regex, Closure $handler, int $chunkSize = 100) 搜索键值 - 正则匹配
- * @method static bool Atomic(string $lockKey, Closure $handler) 原子操作
+ * @method static bool Atomic(string $lockKey, callable $handler) 原子操作
  *
  * @method static bool HSet(string $key, string|int $hashKey, mixed $hashValue) Hash 设置
  * @method static bool HDel(string $key, string|int ...$hashKey) Hash 移除
@@ -116,10 +116,10 @@ class Cache
      *  - lockKey会被自动设置特殊前缀#lock#，可以通过Cache::LockInfo进行查询
      *
      * @param string $lockKey
-     * @param Closure $handler
+     * @param callable $handler
      * @return bool
      */
-    protected static function _Atomic(string $lockKey, Closure $handler): bool
+    protected static function _Atomic(string $lockKey, callable $handler): bool
     {
         $func = __FUNCTION__;
         $result = false;

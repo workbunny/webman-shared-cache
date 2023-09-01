@@ -4,12 +4,12 @@ namespace Workbunny\WebmanSharedCache\Tests;
 
 use Workbunny\WebmanSharedCache\Cache;
 
+/**
+ * @runTestsInSeparateProcesses
+ */
 class CacheTest extends BaseTestCase
 {
-    /**
-     * @runInSeparateProcess
-     * @return void
-     */
+
     public function testCacheGet(): void
     {
         $key = __METHOD__;
@@ -30,10 +30,7 @@ class CacheTest extends BaseTestCase
         apcu_delete($key);
     }
 
-    /**
-     * @runInSeparateProcess
-     * @return void
-     */
+
     public function testCacheSet(): void
     {
         $key = __METHOD__;
@@ -54,10 +51,7 @@ class CacheTest extends BaseTestCase
         apcu_delete($key);
     }
 
-    /**
-     * @runInSeparateProcess
-     * @return void
-     */
+
     public function testCacheDel(): void
     {
         $key = __METHOD__;
@@ -78,10 +72,7 @@ class CacheTest extends BaseTestCase
         apcu_delete($key);
     }
 
-    /**
-     * @runInSeparateProcess
-     * @return void
-     */
+
     public function testCacheExists(): void
     {
         $key = __METHOD__;
@@ -95,10 +86,7 @@ class CacheTest extends BaseTestCase
         apcu_delete($key);
     }
 
-    /**
-     * @runInSeparateProcess
-     * @return void
-     */
+
     public function testCacheIncr(): void
     {
         $key = __METHOD__;
@@ -132,10 +120,7 @@ class CacheTest extends BaseTestCase
         apcu_delete($key);
     }
 
-    /**
-     * @runInSeparateProcess
-     * @return void
-     */
+
     public function testCacheDecr(): void
     {
         $key = __METHOD__;
