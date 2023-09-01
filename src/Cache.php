@@ -123,16 +123,17 @@ class Cache
     {
         $func = __FUNCTION__;
         $result = false;
+        $params = func_get_args();
         // 创建锁
         apcu_entry($lock = self::GetLockKey($lockKey), function () use (
-            $lockKey, $handler, $func, &$result
+            $lockKey, $handler, $func, $params, &$result
         ) {
             call_user_func($handler);
             $result = true;
             return [
                 'timestamp' => microtime(true),
                 'method'    => $func,
-                'params'    => func_get_args()
+                'params'    => $params
             ];
         });
         if ($result) {
@@ -202,6 +203,7 @@ class Cache
         $blocking = true;
         $func = __FUNCTION__;
         $result = false;
+        $params = func_get_args();
         while ($blocking) {
             // 阻塞保险
             if (time() >= $startTime + self::$fuse) {
@@ -210,7 +212,7 @@ class Cache
             }
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
-                $key, $value, $ttl, $func, &$blocking, &$result
+                $key, $value, $ttl, $func, $params, &$blocking, &$result
             ) {
                 $blocking = false;
                 $v = self::_Get($key, 0);
@@ -223,7 +225,7 @@ class Cache
                 return [
                     'timestamp' => microtime(true),
                     'method'    => $func,
-                    'params'    => func_get_args()
+                    'params'    => $params
                 ];
             });
         }
@@ -244,6 +246,7 @@ class Cache
         $blocking = true;
         $func = __FUNCTION__;
         $result = false;
+        $params = func_get_args();
         while ($blocking) {
             // 阻塞保险
             if (time() >= $startTime + self::$fuse) {
@@ -252,7 +255,7 @@ class Cache
             }
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
-                $key, $value, $ttl, $func, &$blocking, &$result
+                $key, $value, $ttl, $func, $params, &$blocking, &$result
             ) {
                 $blocking = false;
                 $v = self::_Get($key, 0);
@@ -265,7 +268,7 @@ class Cache
                 return [
                     'timestamp' => microtime(true),
                     'method'    => $func,
-                    'params'    => func_get_args()
+                    'params'    => $params
                 ];
             });
         }
@@ -361,6 +364,7 @@ class Cache
         $startTime = time();
         $blocking = true;
         $func = __FUNCTION__;
+        $params = func_get_args();
         while ($blocking) {
             // 阻塞保险
             if (time() >= $startTime + self::$fuse) {
@@ -369,7 +373,7 @@ class Cache
             }
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
-                $key, $hashKey, $hashValue, $func, &$blocking
+                $key, $hashKey, $hashValue, $func, $params, &$blocking
             ) {
                 $blocking = false;
                 $hash = self::_Get($key, []);
@@ -378,7 +382,7 @@ class Cache
                 return [
                     'timestamp' => microtime(true),
                     'method'    => $func,
-                    'params'    => func_get_args()
+                    'params'    => $params
                 ];
             });
         }
@@ -401,6 +405,7 @@ class Cache
         $blocking = true;
         $func = __FUNCTION__;
         $result = false;
+        $params = func_get_args();
         while ($blocking) {
             // 阻塞保险
             if (time() >= $startTime + self::$fuse) {
@@ -409,7 +414,7 @@ class Cache
             }
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
-                $key, $hashKey, $hashValue, $func, &$blocking, &$result
+                $key, $hashKey, $hashValue, $func, $params, &$blocking, &$result
             ) {
                 $blocking = false;
                 $hash = self::_Get($key, []);
@@ -420,7 +425,7 @@ class Cache
                 return [
                     'timestamp' => microtime(true),
                     'method'    => $func,
-                    'params'    => func_get_args()
+                    'params'    => $params
                 ];
             });
         }
@@ -443,6 +448,7 @@ class Cache
         $blocking = true;
         $func = __FUNCTION__;
         $result = false;
+        $params = func_get_args();
         while ($blocking) {
             // 阻塞保险
             if (time() >= $startTime + self::$fuse) {
@@ -451,7 +457,7 @@ class Cache
             }
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
-                $key, $hashKey, $hashValue, $func, &$blocking, &$result
+                $key, $hashKey, $hashValue, $func, $params, &$blocking, &$result
             ) {
                 $blocking = false;
                 $hash = self::_Get($key, []);
@@ -462,7 +468,7 @@ class Cache
                 return [
                     'timestamp' => microtime(true),
                     'method'    => $func,
-                    'params'    => func_get_args()
+                    'params'    => $params
                 ];
             });
         }
@@ -485,6 +491,7 @@ class Cache
         $startTime = time();
         $blocking = true;
         $func = __FUNCTION__;
+        $params = func_get_args();
         while ($blocking) {
             // 阻塞保险
             if (time() >= $startTime + self::$fuse) {
@@ -492,7 +499,9 @@ class Cache
                 return false;
             }
             // 创建锁
-            apcu_entry(self::GetLockKey($key), function () use ($key, $hashKey, $func, &$blocking) {
+            apcu_entry(self::GetLockKey($key), function () use (
+                $key, $hashKey, $func, $params, &$blocking
+            ) {
                 $blocking = false;
                 $hash = self::_Get($key, []);
                 foreach ($hashKey as $hk) {
@@ -502,7 +511,7 @@ class Cache
                 return [
                     'timestamp' => microtime(true),
                     'method'    => $func,
-                    'params'    => func_get_args()
+                    'params'    => $params
                 ];
             });
         }
