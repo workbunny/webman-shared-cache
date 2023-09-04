@@ -19,7 +19,7 @@ use const APC_ITER_ALL;
  * @method static array Exists(string ...$keys) 判断缓存键
  *
  * @method static void Search(string $regex, Closure $handler, int $chunkSize = 100) 搜索键值 - 正则匹配
- * @method static bool Atomic(string $lockKey, callable $handler) 原子操作
+ * @method static bool Atomic(string $lockKey, Closure $handler) 原子操作
  *
  * @method static bool HSet(string $key, string|int $hashKey, mixed $hashValue) Hash 设置
  * @method static bool HDel(string $key, string|int ...$hashKey) Hash 移除
@@ -116,24 +116,23 @@ class Cache
      *  - lockKey会被自动设置特殊前缀#lock#，可以通过Cache::LockInfo进行查询
      *
      * @param string $lockKey
-     * @param callable $handler
+     * @param Closure $handler
      * @return bool
      */
-    protected static function _Atomic(string $lockKey, callable $handler): bool
+    protected static function _Atomic(string $lockKey, Closure $handler): bool
     {
         $func = __FUNCTION__;
         $result = false;
-        $params = func_get_args();
         // 创建锁
         apcu_entry($lock = self::GetLockKey($lockKey), function () use (
-            $lockKey, $handler, $func, $params, &$result
+            $lockKey, $handler, $func, &$result
         ) {
             call_user_func($handler);
             $result = true;
             return [
                 'timestamp' => microtime(true),
                 'method'    => $func,
-                'params'    => $params
+                'params'    => [$lockKey, '\Closure']
             ];
         });
         if ($result) {
@@ -336,7 +335,7 @@ class Cache
      * 搜索
      *
      * @param string $regex 正则
-     * @param Closure $handler = function (array $current) {}
+     * @param Closure $handler = function ($key, $value) {}
      * @param int $chunkSize
      * @return void
      */
@@ -344,7 +343,8 @@ class Cache
     {
         $iterator = new APCUIterator($regex, APC_ITER_ALL, $chunkSize);
         while ($iterator->valid()) {
-            call_user_func($handler, $iterator->current());
+            $data = $iterator->current();
+            call_user_func($handler, $data['key'], $data['value']);
             $iterator->next();
         }
     }
@@ -585,17 +585,19 @@ class Cache
     /**
      * 获取锁信息
      *
-     * @return array = [[
-     *  'timestamp' => float,
-     *  'method'    => string,
-     *  'params'    => array,
-     * ]]
+     * @return array = [
+     *  lockKey => [
+     *      'timestamp' => 创建时间(float),
+     *      'method'    => 创建的方法(string),
+     *      'params'    => 方法参数(array),
+     *  ]
+     * ]
      */
     protected static function _LockInfo(): array
     {
         $res = [];
-        self::_Search(self::WildcardToRegex(self::LOCK . '*'), function (array $current) use (&$res) {
-            $res[] = $current['value'];
+        self::_Search(self::WildcardToRegex(self::LOCK . '*'), function ($key, $value) use (&$res) {
+            $res[$key] = $value;
         });
         return $res;
     }

@@ -6,10 +6,6 @@ use Workbunny\WebmanSharedCache\Cache;
 
 class HashTest extends BaseTestCase
 {
-    /**
-     * @runInSeparateProcess
-     * @return void
-     */
     public function testHashGet(): void
     {
         $key = __METHOD__;
@@ -37,10 +33,6 @@ class HashTest extends BaseTestCase
         apcu_delete($key);
     }
 
-    /**
-     * @runInSeparateProcess
-     * @return void
-     */
     public function testHashSet(): void
     {
         $key = __METHOD__;
@@ -68,10 +60,6 @@ class HashTest extends BaseTestCase
         apcu_delete($key);
     }
 
-    /**
-     * @runInSeparateProcess
-     * @return void
-     */
     public function testHashDel(): void
     {
         $key = __METHOD__;
@@ -104,10 +92,6 @@ class HashTest extends BaseTestCase
         apcu_delete($key);
     }
 
-    /**
-     * @runInSeparateProcess
-     * @return void
-     */
     public function testHashExists(): void
     {
         $key = __METHOD__;
@@ -125,10 +109,6 @@ class HashTest extends BaseTestCase
         apcu_delete($key);
     }
 
-    /**
-     * @runInSeparateProcess
-     * @return void
-     */
     public function testHashIncr(): void
     {
         $key = __METHOD__;
@@ -173,10 +153,6 @@ class HashTest extends BaseTestCase
         apcu_delete($key);
     }
 
-    /**
-     * @runInSeparateProcess
-     * @return void
-     */
     public function testHashDecr(): void
     {
         $key = __METHOD__;

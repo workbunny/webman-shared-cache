@@ -4,10 +4,6 @@ namespace Workbunny\WebmanSharedCache\Tests;
 
 use Workbunny\WebmanSharedCache\Cache;
 
-/**
- * @backupGlobals disabled
- * @runTestsInSeparateProcesses
- */
 class GenericTest extends BaseTestCase
 {
 
@@ -67,38 +63,80 @@ class GenericTest extends BaseTestCase
         $this->assertArrayHasKey('cache_list', $info);
     }
 
-//    /**
-//     * @return void
-//     */
-//    public function testAtomic(): void
-//    {
-//        $lockKey = Cache::GetLockKey($key = __METHOD__);
-//        $this->assertTrue(Cache::Atomic($key, function () {
-//            return true;
-//        }));
-//
-//        $this->assertTrue(Cache::Atomic($key, function () use ($key) {
-//            Cache::Set("$key-1", "$key-1");
-//            Cache::Set("$key-2", "$key-2");
-//        }));
-//        $this->assertEquals("$key-1", Cache::Get("$key-1"));
-//        $this->assertEquals("$key-2", Cache::Get("$key-2"));
-//        apcu_delete("$key-1");
-//        apcu_delete("$key-2");
-//
-//        apcu_store($lockKey, 1);
-//        $this->assertFalse(Cache::Atomic($key, function () {
-//            return true;
-//        }));
-//        apcu_delete($lockKey);
-//
-//        apcu_store($lockKey, 1);
-//        $this->assertFalse(Cache::Atomic($key, function () use ($key) {
-//            Cache::Set("$key-1", "$key-1");
-//            Cache::Set("$key-2", "$key-2");
-//        }));
-//        $this->assertNull(Cache::Get("$key-1"));
-//        $this->assertNull(Cache::Get("$key-2"));
-//        apcu_delete($lockKey);
-//    }
+    public function testSearch(): void
+    {
+        $key = __FUNCTION__;
+        apcu_store("$key-1", 1);
+        apcu_store("$key-2", 1);
+        apcu_store("$key--1", 1);
+        apcu_store("$key--2", 1);
+
+        $res = [];
+        Cache::Search("/^$key.+$/", function ($key, $value) use (&$res) {
+            $res[$key] = $value;
+        });
+        $this->assertEquals([
+            "$key-1" => 1,
+            "$key-2" => 1,
+            "$key--1" => 1,
+            "$key--2" => 1,
+        ], $res);
+
+        $res = [];
+        Cache::Search(Cache::WildcardToRegex("$key-*"), function ($key, $value) use (&$res) {
+            $res[$key] = $value;
+        });
+        $this->assertEquals([
+            "$key-1" => 1,
+            "$key-2" => 1,
+            "$key--1" => 1,
+            "$key--2" => 1,
+        ], $res);
+
+        $res = [];
+        Cache::Search(Cache::WildcardToRegex("$key-?"), function ($key, $value) use (&$res) {
+            $res[$key] = $value;
+        });
+        $this->assertEquals([
+            "$key-1" => 1,
+            "$key-2" => 1,
+        ], $res);
+
+        apcu_delete("$key-1");
+        apcu_delete("$key-2");
+        apcu_delete("$key--1");
+        apcu_delete("$key--2");
+    }
+
+    public function testAtomic(): void
+    {
+        $lockKey = Cache::GetLockKey($key = __METHOD__);
+        $this->assertTrue(Cache::Atomic($key, function () {
+            return true;
+        }));
+
+        $this->assertTrue(Cache::Atomic($key, function () use ($key) {
+            Cache::Set("$key-1", "$key-1");
+            Cache::Set("$key-2", "$key-2");
+        }));
+        $this->assertEquals("$key-1", Cache::Get("$key-1"));
+        $this->assertEquals("$key-2", Cache::Get("$key-2"));
+        apcu_delete("$key-1");
+        apcu_delete("$key-2");
+
+        apcu_store($lockKey, 1);
+        $this->assertFalse(Cache::Atomic($key, function () {
+            return true;
+        }));
+        apcu_delete($lockKey);
+
+        apcu_store($lockKey, 1);
+        $this->assertFalse(Cache::Atomic($key, function () use ($key) {
+            Cache::Set("$key-1", "$key-1");
+            Cache::Set("$key-2", "$key-2");
+        }));
+        $this->assertNull(Cache::Get("$key-1"));
+        $this->assertNull(Cache::Get("$key-2"));
+        apcu_delete($lockKey);
+    }
 }

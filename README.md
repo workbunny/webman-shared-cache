@@ -35,6 +35,7 @@
 - 可以用作一些服务器的本地缓存，如页面缓存、L2-cache；
 - 可以跨进程做一些计算工作，也可以跨进程通讯；
 - 用在一些延迟敏感的服务下，如游戏服务器；
+- 简单的限流插件；
 
 ## 简介
 
@@ -67,6 +68,8 @@
 
 ## 使用
 
+### 1. Cache基础使用
+
 - 类似Redis的String【使用方法与Redis基本一致】
   - 支持 Set/Get/Del/Keys/Exists
   - 支持 Incr/Decr，支持浮点运算
@@ -82,15 +85,15 @@
   ```php
   $result = [];
   # 默认正则匹配 - 以50条为一次分片查询
-  \Workbunny\WebmanSharedCache\Cache::Search('/^abc.+$/', function (array $current) use (&$result) {
-      $result[] = $current;
+  \Workbunny\WebmanSharedCache\Cache::Search('/^abc.+$/', function ($key, $value) use (&$result) { 
+      $result[$key] = $value;
   }, 50);
   
   # 通配符转正则
   \Workbunny\WebmanSharedCache\Cache::Search(
       \Workbunny\WebmanSharedCache\Cache::WildcardToRegex('abc*'),
-      function (array $current) use (&$result) {
-          $result[] = $current;
+      function ($key, $value) use (&$result) {
+          $result[$key] = $value;
       }
   );
   ```
@@ -129,4 +132,25 @@
   \Workbunny\WebmanSharedCache\Cache::Clear();
   ```
   
-- 其他功能具体可以参看**代码注释**和**测试用例**
+### 2. RateLimiter插件
+
+> 高效轻量的亲缘进程限流器
+
+1. 在/config/plugin/workbbunny/webman-shared-cache/rate-limit.php中配置
+2. 在使用的位置调用
+  - 当没有执行限流时，返回空数组
+  - 当执行但没有到达限流时，返回数组is_limit为false
+  - 当执行且到达限流时，返回数组is_limit为true
+  ```php
+  $rate = \Workbunny\WebmanSharedCache\RateLimiter::traffic('test');
+  if ($rate['is_limit'] ?? false) {
+      // 限流逻辑 如可以抛出异常、返回错误信息等
+      return new \support\Response(429, [
+          'X-Rate-Reset' => $rate['reset'],
+          'X-Rate-Limit' => $rate['limit'],
+          'X-Rate-Remaining' => $rate['reset']
+      ])
+  }
+  ```
+  
+### 其他功能具体可以参看代码注释和测试用例

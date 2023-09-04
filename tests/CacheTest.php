@@ -4,9 +4,6 @@ namespace Workbunny\WebmanSharedCache\Tests;
 
 use Workbunny\WebmanSharedCache\Cache;
 
-/**
- * @runTestsInSeparateProcesses
- */
 class CacheTest extends BaseTestCase
 {
 

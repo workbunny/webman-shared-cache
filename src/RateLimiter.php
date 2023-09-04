@@ -8,18 +8,22 @@ class RateLimiter
 
     /**
      * 限流
+     *  - 当没有执行限流时，返回空数组
+     *  - 当执行但没有到达限流时，返回数组is_limit为false
+     *  - 当执行且到达限流时，返回数组is_limit为true
      *
      * @param string $limitKey
      * @param string $configKey
-     * @return false|array = [
+     * @return array = [
      *  'limit'      => (int)窗口限制数量,
      *  'remaining'  => (int)当前窗口剩余数量,
      *  'reset'      => (int)当前窗口剩余时间,
      *  'is_limit'   => (bool)是否达到限流
      * ]
      */
-    public static function traffic(string $limitKey, string $configKey = 'default'): false|array
+    public static function traffic(string $limitKey, string $configKey = 'default'): array
     {
+        $data = [];
         if (
             $config = self::$_debug ?
             [
@@ -28,7 +32,6 @@ class RateLimiter
             ] :
             config("plugin.workbunny.webman-shared-cache.rate-limit.$configKey", [])
         ) {
-            $data = [];
             $blocking = false;
             while (!$blocking) {
                 $blocking = Cache::Atomic($limitKey, function () use ($limitKey, $config, &$data) {
@@ -62,8 +65,7 @@ class RateLimiter
                     ];
                 });
             }
-            return $data;
         }
-        return false;
+        return $data;
     }
 }
