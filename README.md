@@ -101,11 +101,24 @@
 - 原子性执行
   ```php
   # key-1、key-2、key-3会被当作一次原子性操作
-  \Workbunny\WebmanSharedCache\Cache::Atomic('lock-test', function () { 
+  
+  # 成功则返回true，失败返回false，锁冲突会导致执行失败
+  $result = \Workbunny\WebmanSharedCache\Cache::Atomic('lock-test', function () { 
       \Workbunny\WebmanSharedCache\Cache::Set('key-1', 1);
       \Workbunny\WebmanSharedCache\Cache::Set('key-2', 2);
       \Workbunny\WebmanSharedCache\Cache::Set('key-3', 3);
   });
+  
+  # 阻塞等待执行
+  $result = false
+  while (!$result) {
+      # TODO 可以适当增加保险，以免超长阻塞
+      $result = \Workbunny\WebmanSharedCache\Cache::Atomic('lock-test', function () { 
+          \Workbunny\WebmanSharedCache\Cache::Set('key-1', 1);
+          \Workbunny\WebmanSharedCache\Cache::Set('key-2', 2);
+          \Workbunny\WebmanSharedCache\Cache::Set('key-3', 3);
+      });
+  }
   ```
 
 - 查看cache信息
