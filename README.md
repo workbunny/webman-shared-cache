@@ -98,6 +98,16 @@
   );
   ```
 
+- 原子性执行
+  ```php
+  # key-1、key-2、key-3会被当作一次原子性操作
+  \Workbunny\WebmanSharedCache\Cache::Atomic('lock-test', function () { 
+      \Workbunny\WebmanSharedCache\Cache::Set('key-1', 1);
+      \Workbunny\WebmanSharedCache\Cache::Set('key-2', 2);
+      \Workbunny\WebmanSharedCache\Cache::Set('key-3', 3);
+  });
+  ```
+
 - 查看cache信息
   ```php
   # 全量数据
