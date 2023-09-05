@@ -131,22 +131,22 @@
 - **查看cache信息**
   ```php
   # 全量数据
-  \Workbunny\WebmanSharedCache\Cache::Info();
+  var_dump(\Workbunny\WebmanSharedCache\Cache::Info());
   
   # 不查询数据
-  \Workbunny\WebmanSharedCache\Cache::Info(true);
+  var_dump(\Workbunny\WebmanSharedCache\Cache::Info(true));
   ```
   
 - **查看锁信息**
   ```php
   # Hash数据的处理建立在写锁之上，如需调试，则使用该方法查询锁信息
-  \Workbunny\WebmanSharedCache\Cache::LockInfo();
+  var_dump(\Workbunny\WebmanSharedCache\Cache::LockInfo());
   ```
 
 - **查看键信息**
   ```php
   # 包括键的一些基础信息
-  \Workbunny\WebmanSharedCache\Cache::KeyInfo('test-key');
+  var_dump(\Workbunny\WebmanSharedCache\Cache::KeyInfo('test-key'));
   ```
   
 - **清空cache**
