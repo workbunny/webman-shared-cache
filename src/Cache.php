@@ -19,7 +19,7 @@ use const APC_ITER_ALL;
  * @method static array Exists(string ...$keys) 判断缓存键
  *
  * @method static void Search(string $regex, Closure $handler, int $chunkSize = 100) 搜索键值 - 正则匹配
- * @method static bool Atomic(string $lockKey, Closure $handler) 原子操作
+ * @method static bool Atomic(string $lockKey, Closure $handler, bool $blocking = false) 原子操作
  *
  * @method static bool HSet(string $key, string|int $hashKey, mixed $hashValue) Hash 设置
  * @method static bool HDel(string $key, string|int ...$hashKey) Hash 移除
@@ -117,24 +117,46 @@ class Cache
      *
      * @param string $lockKey
      * @param Closure $handler
+     * @param bool $blocking
      * @return bool
      */
-    protected static function _Atomic(string $lockKey, Closure $handler): bool
+    protected static function _Atomic(string $lockKey, Closure $handler, bool $blocking = false): bool
     {
         $func = __FUNCTION__;
         $result = false;
-        // 创建锁
-        apcu_entry($lock = self::GetLockKey($lockKey), function () use (
-            $lockKey, $handler, $func, &$result
-        ) {
-            call_user_func($handler);
-            $result = true;
-            return [
-                'timestamp' => microtime(true),
-                'method'    => $func,
-                'params'    => [$lockKey, '\Closure']
-            ];
-        });
+        if ($blocking) {
+            $startTime = time();
+            while ($blocking) {
+                // 阻塞保险
+                if (time() >= $startTime + self::$fuse) {return false;}
+                // 创建锁
+                apcu_entry($lock = self::GetLockKey($lockKey), function () use (
+                    $lockKey, $handler, $func, &$result, &$blocking
+                ) {
+                    call_user_func($handler);
+                    $result = true;
+                    $blocking = false;
+                    return [
+                        'timestamp' => microtime(true),
+                        'method'    => $func,
+                        'params'    => [$lockKey, '\Closure']
+                    ];
+                });
+            }
+        } else {
+            // 创建锁
+            apcu_entry($lock = self::GetLockKey($lockKey), function () use (
+                $lockKey, $handler, $func, &$result
+            ) {
+                call_user_func($handler);
+                $result = true;
+                return [
+                    'timestamp' => microtime(true),
+                    'method'    => $func,
+                    'params'    => [$lockKey, '\Closure']
+                ];
+            });
+        }
         if ($result) {
             self::_Del($lock);
         }
@@ -205,10 +227,7 @@ class Cache
         $params = func_get_args();
         while ($blocking) {
             // 阻塞保险
-            if (time() >= $startTime + self::$fuse) {
-                self::_Del(self::GetLockKey($key));
-                return false;
-            }
+            if (time() >= $startTime + self::$fuse) {return false;}
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
                 $key, $value, $ttl, $func, $params, &$blocking, &$result
@@ -248,10 +267,7 @@ class Cache
         $params = func_get_args();
         while ($blocking) {
             // 阻塞保险
-            if (time() >= $startTime + self::$fuse) {
-                self::_Del(self::GetLockKey($key));
-                return false;
-            }
+            if (time() >= $startTime + self::$fuse) {return false;}
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
                 $key, $value, $ttl, $func, $params, &$blocking, &$result
@@ -367,10 +383,7 @@ class Cache
         $params = func_get_args();
         while ($blocking) {
             // 阻塞保险
-            if (time() >= $startTime + self::$fuse) {
-                self::_Del(self::GetLockKey($key));
-                return false;
-            }
+            if (time() >= $startTime + self::$fuse) {return false;}
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
                 $key, $hashKey, $hashValue, $func, $params, &$blocking
@@ -408,10 +421,7 @@ class Cache
         $params = func_get_args();
         while ($blocking) {
             // 阻塞保险
-            if (time() >= $startTime + self::$fuse) {
-                self::_Del(self::GetLockKey($key));
-                return false;
-            }
+            if (time() >= $startTime + self::$fuse) {return false;}
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
                 $key, $hashKey, $hashValue, $func, $params, &$blocking, &$result
@@ -451,10 +461,7 @@ class Cache
         $params = func_get_args();
         while ($blocking) {
             // 阻塞保险
-            if (time() >= $startTime + self::$fuse) {
-                self::_Del(self::GetLockKey($key));
-                return false;
-            }
+            if (time() >= $startTime + self::$fuse) {return false;}
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
                 $key, $hashKey, $hashValue, $func, $params, &$blocking, &$result
@@ -494,10 +501,7 @@ class Cache
         $params = func_get_args();
         while ($blocking) {
             // 阻塞保险
-            if (time() >= $startTime + self::$fuse) {
-                self::_Del(self::GetLockKey($key));
-                return false;
-            }
+            if (time() >= $startTime + self::$fuse) {return false;}
             // 创建锁
             apcu_entry(self::GetLockKey($key), function () use (
                 $key, $hashKey, $func, $params, &$blocking

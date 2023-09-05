@@ -68,20 +68,22 @@
 
 ## 使用
 
+#### 注：\Workbunny\WebmanSharedCache\Cache::$fuse为全局阻塞保险
+
 ### 1. Cache基础使用
 
-- 类似Redis的String【使用方法与Redis基本一致】
+- **类似Redis的String【使用方法与Redis基本一致】**
   - 支持 Set/Get/Del/Keys/Exists
   - 支持 Incr/Decr，支持浮点运算
   - 支持 储存对象数据
   - 支持 XX/NX模式，支持秒级过期时间
 
-- 类似Redis的Hash【使用方法与Redis基本一致】
+- **类似Redis的Hash【使用方法与Redis基本一致】**
   - 支持 HSet/HGet/HDel/HKeys/HExists 
   - 支持 HIncr/HDecr，支持浮点运算
   - 支持 储存对象数据
   
-- 通配符/正则匹配Search
+- **通配符/正则匹配Search**
   ```php
   $result = [];
   # 默认正则匹配 - 以50条为一次分片查询
@@ -98,18 +100,23 @@
   );
   ```
 
-- 原子性执行
+- **原子性执行**
   ```php
   # key-1、key-2、key-3会被当作一次原子性操作
   
-  # 成功则返回true，失败返回false，锁冲突会导致执行失败
+  # 非阻塞执行 - 成功执行则返回true，失败返回false，锁冲突会导致执行失败
   $result = \Workbunny\WebmanSharedCache\Cache::Atomic('lock-test', function () { 
       \Workbunny\WebmanSharedCache\Cache::Set('key-1', 1);
       \Workbunny\WebmanSharedCache\Cache::Set('key-2', 2);
       \Workbunny\WebmanSharedCache\Cache::Set('key-3', 3);
   });
-  
-  # 阻塞等待执行
+  # 阻塞等待执行 - 默认阻塞受Cache::$fuse阻塞保险影响
+  $result = \Workbunny\WebmanSharedCache\Cache::Atomic('lock-test', function () { 
+      \Workbunny\WebmanSharedCache\Cache::Set('key-1', 1);
+      \Workbunny\WebmanSharedCache\Cache::Set('key-2', 2);
+      \Workbunny\WebmanSharedCache\Cache::Set('key-3', 3);
+  }, true);
+  # 自行实现阻塞
   $result = false
   while (!$result) {
       # TODO 可以适当增加保险，以免超长阻塞
@@ -121,7 +128,7 @@
   }
   ```
 
-- 查看cache信息
+- **查看cache信息**
   ```php
   # 全量数据
   \Workbunny\WebmanSharedCache\Cache::Info();
@@ -130,19 +137,19 @@
   \Workbunny\WebmanSharedCache\Cache::Info(true);
   ```
   
-- 查看锁信息
+- **查看锁信息**
   ```php
   # Hash数据的处理建立在写锁之上，如需调试，则使用该方法查询锁信息
   \Workbunny\WebmanSharedCache\Cache::LockInfo();
   ```
 
-- 查看键信息
+- **查看键信息**
   ```php
   # 包括键的一些基础信息
   \Workbunny\WebmanSharedCache\Cache::KeyInfo('test-key');
   ```
   
-- 清空cache
+- **清空cache**
   - 使用Del多参数进行清理
   ```php
   # 接受多个参数
