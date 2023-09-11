@@ -133,13 +133,14 @@ class Cache
                 apcu_entry($lock = self::GetLockKey($lockKey), function () use (
                     $lockKey, $handler, $func, &$result, &$blocking
                 ) {
-                    call_user_func($handler);
+                    $res = call_user_func($handler);
                     $result = true;
                     $blocking = false;
                     return [
                         'timestamp' => microtime(true),
                         'method'    => $func,
-                        'params'    => [$lockKey, '\Closure']
+                        'params'    => [$lockKey, '\Closure'],
+                        'result'    => $res
                     ];
                 });
             }
@@ -148,12 +149,13 @@ class Cache
             apcu_entry($lock = self::GetLockKey($lockKey), function () use (
                 $lockKey, $handler, $func, &$result
             ) {
-                call_user_func($handler);
+                $res = call_user_func($handler);
                 $result = true;
                 return [
                     'timestamp' => microtime(true),
                     'method'    => $func,
-                    'params'    => [$lockKey, '\Closure']
+                    'params'    => [$lockKey, '\Closure'],
+                    'result'    => $res
                 ];
             });
         }
@@ -220,35 +222,25 @@ class Cache
      */
     protected static function _Incr(string $key, int|float $value = 1, int $ttl = 0): bool|int|float
     {
-        $startTime = time();
-        $blocking = true;
         $func = __FUNCTION__;
         $result = false;
         $params = func_get_args();
-        while ($blocking) {
-            // 阻塞保险
-            if (time() >= $startTime + self::$fuse) {return false;}
-            // 创建锁
-            apcu_entry(self::GetLockKey($key), function () use (
-                $key, $value, $ttl, $func, $params, &$blocking, &$result
-            ) {
-                $blocking = false;
-                $v = self::_Get($key, 0);
-                if (is_numeric($v)) {
-                    self::_Set($key, $value = $v + $value, [
-                        'EX' => $ttl
-                    ]);
-                    $result = $value;
-                }
-                return [
-                    'timestamp' => microtime(true),
-                    'method'    => $func,
-                    'params'    => $params
-                ];
-            });
-        }
-        // 移除锁
-        self::_Del(self::GetLockKey($key));
+        self::_Atomic($key, function () use (
+            $key, $value, $ttl, $func, $params, &$result
+        ) {
+            $v = self::_Get($key, 0);
+            if (is_numeric($v)) {
+                self::_Set($key, $value = $v + $value, [
+                    'EX' => $ttl
+                ]);
+                $result = $value;
+            }
+            return [
+                'timestamp' => microtime(true),
+                'method'    => $func,
+                'params'    => $params
+            ];
+        }, true);
         return $result;
     }
 
@@ -260,35 +252,25 @@ class Cache
      */
     protected static function _Decr(string $key, int|float $value = 1, int $ttl = 0): bool|int|float
     {
-        $startTime = time();
-        $blocking = true;
         $func = __FUNCTION__;
         $result = false;
         $params = func_get_args();
-        while ($blocking) {
-            // 阻塞保险
-            if (time() >= $startTime + self::$fuse) {return false;}
-            // 创建锁
-            apcu_entry(self::GetLockKey($key), function () use (
-                $key, $value, $ttl, $func, $params, &$blocking, &$result
-            ) {
-                $blocking = false;
-                $v = self::_Get($key, 0);
-                if (is_numeric($v)) {
-                    self::_Set($key, $value = $v - $value, [
-                        'EX' => $ttl
-                    ]);
-                    $result = $value;
-                }
-                return [
-                    'timestamp' => microtime(true),
-                    'method'    => $func,
-                    'params'    => $params
-                ];
-            });
-        }
-        // 移除锁
-        self::_Del(self::GetLockKey($key));
+        self::_Atomic($key, function () use (
+            $key, $value, $ttl, $func, $params, &$result
+        ) {
+            $v = self::_Get($key, 0);
+            if (is_numeric($v)) {
+                self::_Set($key, $value = $v - $value, [
+                    'EX' => $ttl
+                ]);
+                $result = $value;
+            }
+            return [
+                'timestamp' => microtime(true),
+                'method'    => $func,
+                'params'    => $params
+            ];
+        }, true);
         return $result;
     }
 
@@ -377,30 +359,20 @@ class Cache
      */
     protected static function _HSet(string $key, string|int $hashKey, mixed $hashValue): bool
     {
-        $startTime = time();
-        $blocking = true;
         $func = __FUNCTION__;
         $params = func_get_args();
-        while ($blocking) {
-            // 阻塞保险
-            if (time() >= $startTime + self::$fuse) {return false;}
-            // 创建锁
-            apcu_entry(self::GetLockKey($key), function () use (
-                $key, $hashKey, $hashValue, $func, $params, &$blocking
-            ) {
-                $blocking = false;
-                $hash = self::_Get($key, []);
-                $hash[$hashKey] = $hashValue;
-                self::_Set($key, $hash);
-                return [
-                    'timestamp' => microtime(true),
-                    'method'    => $func,
-                    'params'    => $params
-                ];
-            });
-        }
-        // 移除锁
-        self::_Del(self::GetLockKey($key));
+        self::_Atomic($key, function () use (
+            $key, $hashKey, $hashValue, $func, $params
+        ) {
+            $hash = self::_Get($key, []);
+            $hash[$hashKey] = $hashValue;
+            self::_Set($key, $hash);
+            return [
+                'timestamp' => microtime(true),
+                'method'    => $func,
+                'params'    => $params
+            ];
+        }, true);
         return true;
     }
 
@@ -414,33 +386,23 @@ class Cache
      */
     protected static function _HIncr(string $key, string|int $hashKey, int|float $hashValue = 1): bool|int|float
     {
-        $startTime = time();
-        $blocking = true;
         $func = __FUNCTION__;
         $result = false;
         $params = func_get_args();
-        while ($blocking) {
-            // 阻塞保险
-            if (time() >= $startTime + self::$fuse) {return false;}
-            // 创建锁
-            apcu_entry(self::GetLockKey($key), function () use (
-                $key, $hashKey, $hashValue, $func, $params, &$blocking, &$result
-            ) {
-                $blocking = false;
-                $hash = self::_Get($key, []);
-                if (is_numeric($v = ($hash[$hashKey] ?? 0))) {
-                    $hash[$hashKey] = $result = $v + $hashValue;
-                    self::_Set($key, $hash);
-                }
-                return [
-                    'timestamp' => microtime(true),
-                    'method'    => $func,
-                    'params'    => $params
-                ];
-            });
-        }
-        // 移除锁
-        self::_Del(self::GetLockKey($key));
+        self::_Atomic($key, function () use (
+            $key, $hashKey, $hashValue, $func, $params, &$result
+        ) {
+            $hash = self::_Get($key, []);
+            if (is_numeric($v = ($hash[$hashKey] ?? 0))) {
+                $hash[$hashKey] = $result = $v + $hashValue;
+                self::_Set($key, $hash);
+            }
+            return [
+                'timestamp' => microtime(true),
+                'method'    => $func,
+                'params'    => $params
+            ];
+        }, true);
         return $result;
     }
 
@@ -454,33 +416,23 @@ class Cache
      */
     protected static function _HDecr(string $key, string|int $hashKey, int|float $hashValue = 1): bool|int|float
     {
-        $startTime = time();
-        $blocking = true;
         $func = __FUNCTION__;
         $result = false;
         $params = func_get_args();
-        while ($blocking) {
-            // 阻塞保险
-            if (time() >= $startTime + self::$fuse) {return false;}
-            // 创建锁
-            apcu_entry(self::GetLockKey($key), function () use (
-                $key, $hashKey, $hashValue, $func, $params, &$blocking, &$result
-            ) {
-                $blocking = false;
-                $hash = self::_Get($key, []);
-                if (is_numeric($v = ($hash[$hashKey] ?? 0))) {
-                    $hash[$hashKey] = $result = $v - $hashValue;
-                    self::_Set($key, $hash);
-                }
-                return [
-                    'timestamp' => microtime(true),
-                    'method'    => $func,
-                    'params'    => $params
-                ];
-            });
-        }
-        // 移除锁
-        self::_Del(self::GetLockKey($key));
+        self::_Atomic($key, function () use (
+            $key, $hashKey, $hashValue, $func, $params, &$result
+        ) {
+            $hash = self::_Get($key, []);
+            if (is_numeric($v = ($hash[$hashKey] ?? 0))) {
+                $hash[$hashKey] = $result = $v - $hashValue;
+                self::_Set($key, $hash);
+            }
+            return [
+                'timestamp' => microtime(true),
+                'method'    => $func,
+                'params'    => $params
+            ];
+        }, true);
         return $result;
     }
 
@@ -495,32 +447,22 @@ class Cache
      */
     protected static function _HDel(string $key, string|int ...$hashKey): bool
     {
-        $startTime = time();
-        $blocking = true;
         $func = __FUNCTION__;
         $params = func_get_args();
-        while ($blocking) {
-            // 阻塞保险
-            if (time() >= $startTime + self::$fuse) {return false;}
-            // 创建锁
-            apcu_entry(self::GetLockKey($key), function () use (
-                $key, $hashKey, $func, $params, &$blocking
-            ) {
-                $blocking = false;
-                $hash = self::_Get($key, []);
-                foreach ($hashKey as $hk) {
-                    unset($hash[$hk]);
-                }
-                self::_Set($key, $hash);
-                return [
-                    'timestamp' => microtime(true),
-                    'method'    => $func,
-                    'params'    => $params
-                ];
-            });
-        }
-        // 移除锁
-        self::_Del(self::GetLockKey($key));
+        self::_Atomic($key, function () use (
+            $key, $hashKey, $func, $params
+        ) {
+            $hash = self::_Get($key, []);
+            foreach ($hashKey as $hk) {
+                unset($hash[$hk]);
+            }
+            self::_Set($key, $hash);
+            return [
+                'timestamp' => microtime(true),
+                'method'    => $func,
+                'params'    => $params
+            ];
+        }, true);
         return true;
     }
 
