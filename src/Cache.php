@@ -236,6 +236,7 @@ class Cache
                 $result = $value;
             }
             return [
+                'internal'  => true,
                 'timestamp' => microtime(true),
                 'method'    => $func,
                 'params'    => $params
@@ -266,6 +267,7 @@ class Cache
                 $result = $value;
             }
             return [
+                'internal'  => true,
                 'timestamp' => microtime(true),
                 'method'    => $func,
                 'params'    => $params
@@ -368,6 +370,7 @@ class Cache
             $hash[$hashKey] = $hashValue;
             self::_Set($key, $hash);
             return [
+                'internal'  => true,
                 'timestamp' => microtime(true),
                 'method'    => $func,
                 'params'    => $params
@@ -398,6 +401,7 @@ class Cache
                 self::_Set($key, $hash);
             }
             return [
+                'internal'  => true,
                 'timestamp' => microtime(true),
                 'method'    => $func,
                 'params'    => $params
@@ -428,6 +432,7 @@ class Cache
                 self::_Set($key, $hash);
             }
             return [
+                'internal'  => true,
                 'timestamp' => microtime(true),
                 'method'    => $func,
                 'params'    => $params
@@ -458,6 +463,7 @@ class Cache
             }
             self::_Set($key, $hash);
             return [
+                'internal'  => true,
                 'timestamp' => microtime(true),
                 'method'    => $func,
                 'params'    => $params
