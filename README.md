@@ -11,6 +11,9 @@
     <a href="https://github.com/workbunny/webman-shared-cache/actions">
         <img src="https://github.com/workbunny/webman-shared-cache/actions/workflows/CI.yml/badge.svg" alt="Build Status">
     </a>
+    <a href="https://github.com/workbunny/webman-shared-cache/releases">
+        <img alt="Latest Stable Version" src="https://badgen.net/packagist/v/workbunny/webman-shared-cache/latest">
+    </a>
     <a href="https://github.com/workbunny/webman-shared-cache/blob/main/composer.json">
         <img alt="PHP Version Require" src="http://poser.pugx.org/workbunny/webman-shared-cache/require/php">
     </a>
