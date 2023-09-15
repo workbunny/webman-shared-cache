@@ -12,7 +12,6 @@ dump("count: $count", "interval: $interval μs");
 $start = microtime(true);
 for ($i = 0; $i < $count; $i ++) {
     $redis->set('test-redis', $i);
-    usleep($interval);
 }
 dump('redis: ' . microtime(true) - $start);
 $redis->del('test-redis');
