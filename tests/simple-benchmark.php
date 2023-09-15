@@ -8,6 +8,25 @@ $redis->pconnect('host.docker.internal');
 
 $count = 10000;
 
+$interval = 0;
+dump("count: $count", "interval: $interval μs");
+$start = microtime(true);
+for ($i = 0; $i < 10000; $i ++) {
+    $redis->set('test-redis', $i);
+    usleep($interval);
+}
+dump('redis: ' . microtime(true) - $start);
+$redis->del('test-redis');
+
+$start = microtime(true);
+for ($i = 0; $i < $count; $i ++) {
+    \Workbunny\WebmanSharedCache\Cache::Set('test-cache', $i);
+    usleep($interval);
+}
+dump('cache: ' . microtime(true) - $start);
+\Workbunny\WebmanSharedCache\Cache::Del('test-cache');
+dump('-----------------------------------');
+
 $interval = 1;
 dump("count: $count", "interval: $interval μs");
 $start = microtime(true);
