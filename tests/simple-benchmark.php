@@ -10,7 +10,7 @@ $count = 10000;
 $interval = 0;
 dump("count: $count", "interval: $interval μs");
 $start = microtime(true);
-for ($i = 0; $i < 10000; $i ++) {
+for ($i = 0; $i < $count; $i ++) {
     $redis->set('test-redis', $i);
     usleep($interval);
 }
