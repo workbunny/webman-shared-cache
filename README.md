@@ -30,7 +30,7 @@
 - shared-cache是基于APCu的本地缓存，它的底层是带有锁的MMAP共享内存；
 - Redis和Memcache本质上是“分布式”缓存系统/K-V数据库，存在网络IO；
 - shared-cache没有持久化，同时也无法实现“分布式”，仅可用于本地的多进程环境（进程需要有亲缘关系）；
-- shared-cache是微妙μs级别的缓存，redis是ms级别的缓存；
+- shared-cache是μs级别的缓存，redis是ms级别的缓存；
 - 网络IO存在内核态和用户态的多次拷贝，存在较大的延迟，共享内存不存在这样的问题；
 
 ### 2. 它的使用场景
