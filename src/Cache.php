@@ -29,6 +29,10 @@ use Workbunny\WebmanSharedCache\Traits\HashMethods;
  * @method static bool|int|float HDecr(string $key, string|int $hashKey, int|float $value = 1) Hash 自减
  * @method static array HExists(string $key, string|int ...$hashKey) Hash key 判断
  *
+ * @method static bool Publish(string $key, mixed $message, null|string|int $workerId = null, bool $store = true) Channel 发布消息
+ * @method static bool|int CreateListener(string $key, string|int $workerId, Closure $listener) Channel 监听器创建
+ * @method static void RemoveListener(string $key, string|int $workerId) Channel 监听器移除
+ *
  * @method static array LockInfo() 获取锁信息
  * @method static array KeyInfo(string $key) 获取键信息
  * @method static array Info(bool $limited = false) 获取信息

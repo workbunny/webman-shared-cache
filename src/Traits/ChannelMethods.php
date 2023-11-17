@@ -75,9 +75,9 @@ trait ChannelMethods
      * @param string $key
      * @param string|int $workerId
      * @param Closure $listener = function(string $channelName, string|int $workerId, mixed $message) {}
-     * @return bool|int|float
+     * @return bool|int 监听器id
      */
-    protected static function _CreateListener(string $key, string|int $workerId, Closure $listener): bool|int|float
+    protected static function _CreateListener(string $key, string|int $workerId, Closure $listener): bool|int
     {
         $func = __FUNCTION__;
         $result = false;
@@ -98,7 +98,7 @@ trait ChannelMethods
                 throw new Error("Channel $key listener already exist. ");
             }
             // 设置回调
-            $channel[$workerId] = Future::add(function () use ($key, $workerId, $listener) {
+            $channel[$workerId] = $result = Future::add(function () use ($key, $workerId, $listener) {
                 // 原子性执行
                 Cache::Atomic($key, function () use ($key, $workerId, $listener) {
                     $channel = self::_Get($channelName = self::GetChannelKey($key), []);
@@ -125,15 +125,14 @@ trait ChannelMethods
      *
      * @param string $key
      * @param string|int $workerId
-     * @return bool|int|float
+     * @return void
      */
-    protected static function _RemoveListener(string $key, string|int $workerId): bool|int|float
+    protected static function _RemoveListener(string $key, string|int $workerId): void
     {
         $func = __FUNCTION__;
-        $result = false;
         $params = func_get_args();
         self::_Atomic($key, function () use (
-            $key, $workerId, $func, $params, &$result
+            $key, $workerId, $func, $params
         ) {
             /**
              * [
@@ -157,6 +156,5 @@ trait ChannelMethods
                 'result'    => null
             ];
         }, true);
-        return $result;
     }
 }
