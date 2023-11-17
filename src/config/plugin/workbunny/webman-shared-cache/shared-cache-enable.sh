@@ -3,9 +3,10 @@
 target=""
 shm_size="1024M"
 shm_segments=1
+mmap_file_mask=""
 file_name="apcu-cache.ini"
 
-options=$(getopt -o hf:t:si:se: --long help,file:,target:,size:,segments: -- "$@")
+options=$(getopt -o hf:t:si:se:m: --long help,file:,target:,size:,segments:,mmap: -- "$@")
 eval set -- "$options"
 
 while true; do
@@ -13,11 +14,13 @@ while true; do
   -h | --help)
     echo "使用: cache-enable.sh [选项]..."
     echo "选项:"
-    echo " -h,  --help     显示帮助信息"
-    echo " -f,  --file     [名称] 指定配置名称"
-    echo " -t,  --target   [路径] 指定目标位置"
-    echo " -si, --size     [取值] 配置 apcu.shm_size"
-    echo " -se, --segments [取值] 配置 apcu.shm_segments"
+    echo " -h,  --help      显示帮助信息"
+    echo " -f,  --file      [名称] 指定配置名称"
+    echo " -t,  --target    [路径] 指定目标位置"
+    echo " -m,  --mmap-file [取值] 配置 apcu.mmap_file_mask 【例 /tmp/apc.XXXXXX】"
+    echo " -si, --size      [取值] 配置 apcu.shm_size       【例 1024M】"
+    echo " -se, --segments  [取值] 配置 apcu.shm_segments"
+
     exit 0
     ;;
   -t | --target)
@@ -36,6 +39,10 @@ while true; do
     shm_segments="$2"
     shift 2
     ;;
+  -m | --mmap)
+      mmap_file_mask="$2"
+      shift 2
+      ;;
   --)
     shift
     break
@@ -51,7 +58,8 @@ if [ -z "$target" ]; then
   target="/usr/local/etc/php/conf.d"
   echo "配置将被创建至 $target，是否继续？(y/N)"
   read answer
-  if [ "$answer" != "y" ]; then
+  answer=$(echo $answer | tr [a-z] [A-Z])
+  if [ "$answer" != "Y" ]; then
     echo "已放弃操作. "
     exit 0
   fi
@@ -63,13 +71,15 @@ apc.enabled=1
 apc.enable_cli=1
 apc.shm_segments=$shm_segments
 apc.shm_size=$shm_size
+apc.mmap_file_mask=$mmap_file_mask
 
 EOF
 
 if [ -e "$target/$file_name" ]; then
   echo "目标位置已经存在配置，是否覆盖？(y/N)"
   read answer
-  if [ "$answer" != "y" ]; then
+  answer=$(echo $answer | tr [a-z] [A-Z])
+  if [ "$answer" != "Y" ]; then
     echo "已放弃覆盖. "
     exit 0
   fi
