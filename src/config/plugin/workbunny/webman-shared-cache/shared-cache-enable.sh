@@ -4,9 +4,10 @@ target=""
 shm_size="1024M"
 shm_segments=1
 mmap_file_mask=""
+gc_ttl=3600
 file_name="apcu-cache.ini"
 
-options=$(getopt -o hf:t:si:se:m: --long help,file:,target:,size:,segments:,mmap: -- "$@")
+options=$(getopt -o hf:t:si:se:m:gc: --long help,file:,target:,size:,segments:,mmap:,gc_ttl: -- "$@")
 eval set -- "$options"
 
 while true; do
@@ -20,6 +21,7 @@ while true; do
     echo " -m,  --mmap-file [取值] 配置 apcu.mmap_file_mask 【例 /tmp/apc.XXXXXX】"
     echo " -si, --size      [取值] 配置 apcu.shm_size       【例 1024M】"
     echo " -se, --segments  [取值] 配置 apcu.shm_segments"
+    echo " -gc, --gc_ttl    [取值] 配置 apcu.gc_ttl"
 
     exit 0
     ;;
@@ -43,6 +45,10 @@ while true; do
       mmap_file_mask="$2"
       shift 2
       ;;
+  -gc | --gc_ttl)
+        gc_ttl="$2"
+        shift 2
+        ;;
   --)
     shift
     break
@@ -72,6 +78,7 @@ apc.enable_cli=1
 apc.shm_segments=$shm_segments
 apc.shm_size=$shm_size
 apc.mmap_file_mask=$mmap_file_mask
+apc.gc_ttl=$gc_ttl
 
 EOF
 
