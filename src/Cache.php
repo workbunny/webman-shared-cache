@@ -5,6 +5,7 @@ namespace Workbunny\WebmanSharedCache;
 use Closure;
 use Error;
 use Workbunny\WebmanSharedCache\Traits\BasicMethods;
+use Workbunny\WebmanSharedCache\Traits\ChannelMethods;
 use Workbunny\WebmanSharedCache\Traits\HashMethods;
 
 /**
@@ -30,6 +31,7 @@ use Workbunny\WebmanSharedCache\Traits\HashMethods;
  * @method static array HExists(string $key, string|int ...$hashKey) Hash key 判断
  *
  * @method static bool Publish(string $key, mixed $message, null|string|int $workerId = null, bool $store = true) Channel 发布消息
+ * @method static array GetChannel(string $key) Channel 获取
  * @method static bool|int CreateListener(string $key, string|int $workerId, Closure $listener) Channel 监听器创建
  * @method static void RemoveListener(string $key, string|int $workerId) Channel 监听器移除
  *
@@ -42,13 +44,15 @@ class Cache
 {
     use BasicMethods;
     use HashMethods;
+    use ChannelMethods;
 
     /** @var int 阻塞保险 */
     public static int $fuse = 60;
 
     /**
-     * @link HashMethods
-     * @link BasicMethods
+     * @link HashMethods hash相关
+     * @link BasicMethods 基础功能
+     * @link ChannelMethods 通道相关
      *
      * @param string $name
      * @param array $arguments

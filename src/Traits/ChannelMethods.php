@@ -24,6 +24,22 @@ trait ChannelMethods
     }
 
     /**
+     * 通道获取
+     *
+     * @param string $key
+     * @return array = [
+     *   workerId = [
+     *      'futureId' => futureId,
+     *      'value'    => array
+     *   ]
+     * ]
+     */
+    protected static function _GetChannel(string $key): array
+    {
+        return self::_Get(self::GetChannelKey($key), []);
+    }
+
+    /**
      * 通道投递
      *  - 阻塞最大时长受fuse保护，默认60s
      *  - 抢占式锁
@@ -102,11 +118,13 @@ trait ChannelMethods
                 // 原子性执行
                 Cache::Atomic($key, function () use ($key, $workerId, $listener) {
                     $channel = self::_Get($channelName = self::GetChannelKey($key), []);
-                    $value = $channel[$workerId]['value'] ?? [];
-                    $msg = array_pop($value);
-                    $channel[$workerId]['value'] = $value;
-                    call_user_func($listener, $key, $workerId, $msg);
-                    self::_Set($channelName, $channel);
+                    if ((!empty($value = $channel[$workerId]['value'] ?? []))) {
+                        $msg = array_pop($value);
+                        $channel[$workerId]['value'] = $value;
+                        call_user_func($listener, $key, $workerId, $msg);
+                        self::_Set($channelName, $channel);
+                    }
+
                 });
             });
             self::_Set($channelName, $channel);

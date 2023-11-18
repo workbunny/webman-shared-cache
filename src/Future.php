@@ -10,6 +10,10 @@ use Workerman\Worker;
 
 class Future
 {
+    public static bool $debug = false;
+    public static ?Closure $debugFunc = null;
+    public static array $debugArgs = [];
+
     /**
      * @var array = [id => func]
      */
@@ -22,6 +26,12 @@ class Future
      */
     public static function add(Closure $func, array $args = []): int|false
     {
+        if (self::$debug) {
+            self::$debugFunc = $func;
+            self::$debugArgs = $args;
+            return 1;
+        }
+
         if (!Worker::$globalEvent) {
             throw new Error("Event driver error. ");
         }
@@ -44,6 +54,12 @@ class Future
      */
     public static function del(int|null $id = null): void
     {
+        if (self::$debug) {
+            self::$debugFunc = null;
+            self::$debugArgs = [];
+            return;
+        }
+
         if (!Worker::$globalEvent) {
             throw new Error("Event driver error. ");
         }
