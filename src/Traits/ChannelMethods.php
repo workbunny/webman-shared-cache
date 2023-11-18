@@ -11,7 +11,7 @@ use Error;
  * @method static array GetChannel(string $key) Channel 获取
  * @method static bool ChPublish(string $key, mixed $message, bool $store = true, null|string|int $workerId = null) Channel 发布消息
  * @method static bool|int ChCreateListener(string $key, string|int $workerId, Closure $listener) Channel 监听器创建
- * @method static void ChRemoveListener(string $key, string|int $workerId, bool $remove = true) Channel 监听器移除
+ * @method static void ChRemoveListener(string $key, string|int $workerId, bool $remove = false) Channel 监听器移除
  */
 trait ChannelMethods
 {

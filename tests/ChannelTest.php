@@ -198,6 +198,35 @@ class ChannelTest extends BaseTestCase
         apcu_delete(Cache::GetChannelKey($channel));
     }
 
+    public function testChannelRemoveListenerUseRemove(): void
+    {
+        Future::$debug = true;
+        $channel = __FUNCTION__;
+        // 初始化确认
+        $this->assertEquals([], Cache::GetChannel($channel));
+        $this->assertEquals([], Cache::LockInfo());
+        // 当前进程执行
+        Cache::ChCreateListener($channel, '1', function (string $key, string|int $workerId, mixed $message) {
+            dump($key, $workerId, $message);
+        });
+        // 确认数据
+        $this->assertEquals([
+            '1' => [
+                'futureId' => 1,
+                'value'    => []
+            ]
+        ], apcu_fetch(Cache::GetChannelKey($channel)));
+        // 确认无锁
+        $this->assertEquals([], Cache::LockInfo());
+        Cache::ChRemoveListener($channel, '1', true);
+        // 确认数据
+        $this->assertEquals([], apcu_fetch(Cache::GetChannelKey($channel)));
+        // 确认无锁
+        $this->assertEquals([], Cache::LockInfo());
+        // 清理
+        apcu_delete(Cache::GetChannelKey($channel));
+    }
+
     public function testChannelRemoveListenerByChild(): void
     {
         Future::$debug = true;
@@ -211,6 +240,7 @@ class ChannelTest extends BaseTestCase
             Cache::ChCreateListener($channel, '1', function (string $key, string|int $workerId, mixed $message) {
                 dump($key, $workerId, $message);
             });
+            Cache::ChRemoveListener($channel, '1', false);
         }, $channel, $message);
         // 确认数据
         $this->assertEquals([
@@ -221,14 +251,27 @@ class ChannelTest extends BaseTestCase
         ], apcu_fetch(Cache::GetChannelKey($channel)));
         // 确认无锁
         $this->assertEquals([], Cache::LockInfo());
-        Cache::ChRemoveListener($channel, '1', false);
+        // 清理
+        apcu_delete(Cache::GetChannelKey($channel));
+    }
+
+    public function testChannelRemoveListenerUseRemoveByChild(): void
+    {
+        Future::$debug = true;
+        $channel = __FUNCTION__;
+        $message = 'test';
+        // 初始化确认
+        $this->assertEquals([], Cache::GetChannel($channel));
+        $this->assertEquals([], Cache::LockInfo());
+        // 子进程执行
+        $this->childExec(static function (string $channel, string $message) {
+            Cache::ChCreateListener($channel, '1', function (string $key, string|int $workerId, mixed $message) {
+                dump($key, $workerId, $message);
+            });
+            Cache::ChRemoveListener($channel, '1', true);
+        }, $channel, $message);
         // 确认数据
-        $this->assertEquals([
-            '1' => [
-                'futureId' => 1,
-                'value'    => []
-            ]
-        ], apcu_fetch(Cache::GetChannelKey($channel)));
+        $this->assertEquals([], apcu_fetch(Cache::GetChannelKey($channel)));
         // 确认无锁
         $this->assertEquals([], Cache::LockInfo());
         // 清理
