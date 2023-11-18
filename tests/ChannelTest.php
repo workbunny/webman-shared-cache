@@ -188,7 +188,7 @@ class ChannelTest extends BaseTestCase
         // 确认数据
         $this->assertEquals([
             '1' => [
-                'futureId' => null,
+                'futureId' => 1,
                 'value'    => []
             ]
         ], apcu_fetch(Cache::GetChannelKey($channel)));
@@ -225,7 +225,7 @@ class ChannelTest extends BaseTestCase
         // 确认数据
         $this->assertEquals([
             '1' => [
-                'futureId' => null,
+                'futureId' => 1,
                 'value'    => []
             ]
         ], apcu_fetch(Cache::GetChannelKey($channel)));

@@ -122,7 +122,6 @@ trait ChannelMethods
         if (isset(self::$_listeners[$key])) {
             throw new Error("Channel $key listener already exist. ");
         }
-        self::$_listeners[$key] = $listener;
         self::_Atomic($key, function () use (
             $key, $workerId, $func, $params, &$result
         ) {
@@ -137,7 +136,9 @@ trait ChannelMethods
             $channel = self::_Get($channelName = self::GetChannelKey($key), []);
 
             // 设置回调
-            $channel[$workerId]['futureId'] = $result = Future::add(function () use ($key, $workerId) {
+            $channel[$workerId]['futureId'] =
+            self::$_listeners[$key] =
+            $result = Future::add(function () use ($key, $workerId) {
                 // 原子性执行
                 self::_Atomic($key, function () use ($key, $workerId) {
                     $channel = self::_Get($channelName = self::GetChannelKey($key), []);
@@ -178,31 +179,30 @@ trait ChannelMethods
      * @param bool $remove 是否移除消息
      * @return void
      */
-    protected static function _ChRemoveListener(string $key, string|int $workerId, bool $remove = true): void
+    protected static function _ChRemoveListener(string $key, string|int $workerId, bool $remove = false): void
     {
         $func = __FUNCTION__;
         $params = func_get_args();
         self::_Atomic($key, function () use (
             $key, $workerId, $func, $params, $remove
         ) {
-            /**
-             * [
-             *  workerId = [
-             *      'futureId' => futureId,
-             *      'value'    => array
-             *  ]
-             * ]
-             */
-            $channel = self::_Get($channelName = self::GetChannelKey($key), []);
-            if ($id = $channel[$workerId]['futureId'] ?? null) {
+            if ($id = self::$_listeners[$key] ?? null) {
                 Future::del($id);
                 if ($remove) {
+                    /**
+                     * [
+                     *  workerId = [
+                     *      'futureId' => futureId,
+                     *      'value'    => array
+                     *  ]
+                     * ]
+                     */
+                    $channel = self::_Get($channelName = self::GetChannelKey($key), []);
                     unset($channel[$workerId]);
-                } else {
-                    $channel[$workerId]['futureId'] = null;
+                    self::_Set($channelName, $channel);
                 }
                 unset(self::$_listeners[$key]);
-                self::_Set($channelName, $channel);
+
             }
 
             return [
