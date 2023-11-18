@@ -218,5 +218,56 @@
       ])
   }
   ```
+
+### 3. Cache的Channel功能
+
+- Channel是一个类似Redis-stream、Redis-list、Redis-Pub/Sub的功能模块
+- 一个通道可以被多个进程监听，每个进程只能监听一个相同通道（也就是对相同通道只能创建一个监听器）
+
+- **向通道发布消息**
+  - 临时消息
+  ```php
+  # 向一个名为test的通道发送临时消息；
+  # 通道没有监听器时，临时消息会被忽略，只有通道存在监听器时，该消息才会被存入通道
+  Cache::ChPublish('test', '这是一个测试消息'， false);
+  ```
+  - 暂存消息
+  ```php
+  # 向一个名为test的通道发送暂存消息；
+  # 通道存在监听器时，该消息会被存入通道内的所有子通道
+  Cache::ChPublish('test', '这是一个测试消息'， true);
+  ``` 
+  - 指定workerId
+  ```php
+  # 指定发送消息至当前通道内workerId为1的子通道
+  Cache::ChPublish('test', '这是一个测试消息'， true, 1);
+  ``` 
+
+- **创建通道监听器**
+  - 一个进程对相同通道仅能创建一个监听器
+  - 一个进程可以同时监听多个不同的通道
+  - 建议workerId使用workerman的workerId进行区分
+  ```php
+  # 向一个名为test的通道创建一个workerId为1的监听器；
+  # 通道消息先进先出，当有消息时会触发回调
+  Cache::ChCreateListener('test', '1', function(string $channelKey, string|int $workerId, mixed $message) {
+      // TODO 你的业务逻辑
+      dump($channelKey, $workerId, $message);
+  });
+  ```
+
+- **移除通道监听器**
+  - 移除监听器子通道及子通道内消息
+  ```php
+  # 向一个名为test的通道创建一个workerId为1的监听器；
+  # 通道移除时不会移除其他子通道消息
+  Cache::ChRemoveListener('test', '1', true);
+  ```
+  - 移除监听器子通道，但保留子通道内消息
+  ```php
+  # 向一个名为test的通道创建一个workerId为1的监听器；
+  # 通道移除时不会移除所有子通道消息
+  Cache::ChRemoveListener('test', '1', false);
+  ```
   
 ### 其他功能具体可以参看代码注释和测试用例

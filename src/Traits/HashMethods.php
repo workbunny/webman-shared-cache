@@ -2,6 +2,15 @@
 
 namespace Workbunny\WebmanSharedCache\Traits;
 
+/**
+ * @method static bool HSet(string $key, string|int $hashKey, mixed $hashValue) Hash 设置
+ * @method static bool HDel(string $key, string|int ...$hashKey) Hash 移除
+ * @method static mixed HGet(string $key, string|int $hashKey, mixed $default = null) Hash 获取
+ * @method static array HKeys(string $key, null|string $regex = null) Hash keys
+ * @method static bool|int|float HIncr(string $key, string|int $hashKey, int|float $value = 1) Hash 自增
+ * @method static bool|int|float HDecr(string $key, string|int $hashKey, int|float $value = 1) Hash 自减
+ * @method static array HExists(string $key, string|int ...$hashKey) Hash key 判断
+ */
 trait HashMethods
 {
     use BasicMethods;

@@ -5,6 +5,23 @@ namespace Workbunny\WebmanSharedCache\Traits;
 use APCUIterator;
 use Closure;
 
+/**
+ * @method static bool Set(string $key, mixed $value, array $optional = []) 设置缓存值
+ * @method static mixed Get(string $key, mixed $default = null) 获取缓存值
+ * @method static array Del(string ...$keys) 移除缓存
+ * @method static array Keys(null|string $regex = null) 获取缓存键
+ * @method static bool|int|float Incr(string $key, int|float $value = 1, int $ttl = 0) 自增
+ * @method static bool|int|float Decr(string $key, int|float $value = 1, int $ttl = 0) 自减
+ * @method static array Exists(string ...$keys) 判断缓存键
+ *
+ * @method static void Search(string $regex, Closure $handler, int $chunkSize = 100) 搜索键值 - 正则匹配
+ * @method static bool Atomic(string $lockKey, Closure $handler, bool $blocking = false) 原子操作
+ *
+ * @method static array LockInfo() 获取锁信息
+ * @method static array KeyInfo(string $key) 获取键信息
+ * @method static array Info(bool $limited = false) 获取信息
+ * @method static bool Clear() 清理所有缓存
+ */
 trait BasicMethods
 {
     /** @var string 写锁 */

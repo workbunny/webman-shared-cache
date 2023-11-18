@@ -7,12 +7,23 @@ use Workbunny\WebmanSharedCache\Cache;
 use Workbunny\WebmanSharedCache\Future;
 use Error;
 
+/**
+ * @method static array GetChannel(string $key) Channel 获取
+ * @method static bool ChPublish(string $key, mixed $message, bool $store = true, null|string|int $workerId = null) Channel 发布消息
+ * @method static bool|int ChCreateListener(string $key, string|int $workerId, Closure $listener) Channel 监听器创建
+ * @method static void ChRemoveListener(string $key, string|int $workerId, bool $remove = true) Channel 监听器移除
+ */
 trait ChannelMethods
 {
     use BasicMethods;
 
     /** @var string 通道前缀 */
     protected static string $_CHANNEL = '#Channel#';
+
+    /**
+     * @var array = [channelKey => listeners]
+     */
+    protected static array $_listeners = [];
 
     /**
      * @param string $key
@@ -50,11 +61,10 @@ trait ChannelMethods
      * @param bool $store 在没有监听器时是否进行储存
      * @return bool
      */
-    protected static function _Publish(string $key, mixed $message, null|string|int $workerId = null, bool $store = true): bool
+    protected static function _ChPublish(string $key, mixed $message, bool $store = true, null|string|int $workerId = null): bool
     {
         $func = __FUNCTION__;
         $params = func_get_args();
-        $key = self::GetChannelKey($key);
         self::_Atomic($key, function () use (
             $key, $message, $func, $params, $store
         ) {
@@ -67,11 +77,21 @@ trait ChannelMethods
              * ]
              */
             $channel = self::_Get($channelName = self::GetChannelKey($key), []);
-            foreach ($channel as $workerId => $item) {
-                if ($store or isset($item['futureId'])) {
-                    $channel[$workerId]['value'][] = $message;
+            // 如果还没有监听器，将数据投入默认
+            if (!$channel) {
+                if ($store) {
+                    $channel['--default--']['value'][] = $message;
                 }
             }
+            // 否则将消息投入到每个worker的监听器数据中
+            else {
+                foreach ($channel as $workerId => $item) {
+                    if ($store or isset($item['futureId'])) {
+                        $channel[$workerId]['value'][] = $message;
+                    }
+                }
+            }
+
             self::_Set($channelName, $channel);
             return [
                 'timestamp' => microtime(true),
@@ -93,13 +113,18 @@ trait ChannelMethods
      * @param Closure $listener = function(string $channelName, string|int $workerId, mixed $message) {}
      * @return bool|int 监听器id
      */
-    protected static function _CreateListener(string $key, string|int $workerId, Closure $listener): bool|int
+    protected static function _ChCreateListener(string $key, string|int $workerId, Closure $listener): bool|int
     {
         $func = __FUNCTION__;
         $result = false;
         $params = func_get_args();
+        $params[2] = '\Closure';
+        if (isset(self::$_listeners[$key])) {
+            throw new Error("Channel $key listener already exist. ");
+        }
+        self::$_listeners[$key] = $listener;
         self::_Atomic($key, function () use (
-            $key, $workerId, $listener, $func, $params, &$result
+            $key, $workerId, $func, $params, &$result
         ) {
             /**
              * [
@@ -110,23 +135,30 @@ trait ChannelMethods
              * ]
              */
             $channel = self::_Get($channelName = self::GetChannelKey($key), []);
-            if (isset($channel[$workerId]['futureId'])) {
-                throw new Error("Channel $key listener already exist. ");
-            }
+
             // 设置回调
-            $channel[$workerId] = $result = Future::add(function () use ($key, $workerId, $listener) {
+            $channel[$workerId]['futureId'] = $result = Future::add(function () use ($key, $workerId) {
                 // 原子性执行
-                Cache::Atomic($key, function () use ($key, $workerId, $listener) {
+                self::_Atomic($key, function () use ($key, $workerId) {
                     $channel = self::_Get($channelName = self::GetChannelKey($key), []);
                     if ((!empty($value = $channel[$workerId]['value'] ?? []))) {
-                        $msg = array_pop($value);
+                        // 先进先出
+                        $msg = array_shift($value);
                         $channel[$workerId]['value'] = $value;
-                        call_user_func($listener, $key, $workerId, $msg);
+                        call_user_func(self::$_listeners[$key], $key, $workerId, $msg);
                         self::_Set($channelName, $channel);
                     }
 
                 });
             });
+            $channel[$workerId]['value'] = [];
+            // 如果存在默认数据
+            if ($default = $channel['--default--']['value'] ?? []) {
+                foreach ($channel as &$item) {
+                    array_unshift($item['value'], ...$default);
+                }
+                unset($channel['--default--']);
+            }
             self::_Set($channelName, $channel);
             return [
                 'timestamp' => microtime(true),
@@ -143,14 +175,15 @@ trait ChannelMethods
      *
      * @param string $key
      * @param string|int $workerId
+     * @param bool $remove 是否移除消息
      * @return void
      */
-    protected static function _RemoveListener(string $key, string|int $workerId): void
+    protected static function _ChRemoveListener(string $key, string|int $workerId, bool $remove = true): void
     {
         $func = __FUNCTION__;
         $params = func_get_args();
         self::_Atomic($key, function () use (
-            $key, $workerId, $func, $params
+            $key, $workerId, $func, $params, $remove
         ) {
             /**
              * [
@@ -163,7 +196,12 @@ trait ChannelMethods
             $channel = self::_Get($channelName = self::GetChannelKey($key), []);
             if ($id = $channel[$workerId]['futureId'] ?? null) {
                 Future::del($id);
-                unset($channel[$workerId]['futureId']);
+                if ($remove) {
+                    unset($channel[$workerId]);
+                } else {
+                    $channel[$workerId]['futureId'] = null;
+                }
+                unset(self::$_listeners[$key]);
                 self::_Set($channelName, $channel);
             }
 
