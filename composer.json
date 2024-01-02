@@ -21,7 +21,11 @@
   "require-dev": {
     "workerman/webman-framework": "^1.0",
     "symfony/var-dumper": "^6.0",
-    "phpunit/phpunit": "^9.6"
+    "phpunit/phpunit": "^9.6",
+    "webman/console": "^1.0"
+  },
+  "suggest": {
+    "webman/console": "Webman-CLI support. "
   },
   "autoload": {
     "psr-4": {
