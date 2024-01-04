@@ -8,11 +8,8 @@
 
 
 <div align="center">
-    <!--<a href="https://github.com/workbunny/webman-shared-cache/actions">
+    <a href="https://github.com/workbunny/webman-shared-cache/actions">
         <img src="https://github.com/workbunny/webman-shared-cache/actions/workflows/CI.yml/badge.svg" alt="Build Status">
-    </a>-->
-    <a href="https://github.com/workbunny/webman-shared-cache/releases">
-        <img alt="Latest Stable Version" src="https://badgen.net/packagist/v/workbunny/webman-shared-cache/latest">
     </a>
     <a href="https://github.com/workbunny/webman-shared-cache/releases">
         <img alt="Latest Stable Version" src="https://badgen.net/packagist/v/workbunny/webman-shared-cache/latest">
