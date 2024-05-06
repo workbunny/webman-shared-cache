@@ -22,9 +22,10 @@ class Future
     /**
      * @param Closure $func
      * @param array $args
+     * @param float|int|null $interval
      * @return int|false
      */
-    public static function add(Closure $func, array $args = []): int|false
+    public static function add(Closure $func, array $args = [], float|int|null $interval = null): int|false
     {
         if (self::$debug) {
             self::$debugFunc = $func;
@@ -37,7 +38,7 @@ class Future
         }
 
         if ($id = Worker::$globalEvent->add(
-            Worker::$eventLoopClass === Event::class ? 0 : 0.001,
+            $interval ?: (Worker::$eventLoopClass === Event::class ? 0 : 0.001),
             EventInterface::EV_TIMER,
             $func,
             $args

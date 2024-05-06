@@ -26,6 +26,20 @@ trait ChannelMethods
     protected static array $_listeners = [];
 
     /**
+     * @var float|int|null
+     */
+    protected static float|int|null $interval = null;
+
+    /**
+     * @param float|int|null $interval
+     * @return void
+     */
+    public static function SetChannelListenerInterval(float|int|null $interval): void
+    {
+        self::$interval = $interval;
+    }
+
+    /**
      * @param string $key
      * @return string
      */
@@ -151,7 +165,7 @@ trait ChannelMethods
                     }
 
                 });
-            });
+            }, interval: self::$interval);
             $channel[$workerId]['value'] = [];
             // 如果存在默认数据
             if ($default = $channel['--default--']['value'] ?? []) {
