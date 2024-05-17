@@ -95,7 +95,7 @@ trait ChannelMethods
             if (!$channel) {
                 if ($store) {
                     // 非指定workerId
-                    if ($workerId !== null) {
+                    if ($workerId === null) {
                         $channel['--default--']['value'][] = $message;
                     }
                     // 指定workerId
@@ -108,7 +108,7 @@ trait ChannelMethods
             // 否则将消息投入到每个worker的监听器数据中
             else {
                 // 非指定workerId
-                if ($workerId !== null) {
+                if ($workerId === null) {
                     if ($store or isset($channel[$workerId]['futureId'])) {
                         $channel[$workerId]['value'][] = $message;
                     }
