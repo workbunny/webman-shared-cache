@@ -109,16 +109,16 @@ trait ChannelMethods
             else {
                 // 非指定workerId
                 if ($workerId === null) {
-                    if ($store or isset($channel[$workerId]['futureId'])) {
-                        $channel[$workerId]['value'][] = $message;
-                    }
-                }
-                // 指定workerId
-                else {
                     foreach ($channel as $workerId => $item) {
                         if ($store or isset($item['futureId'])) {
                             $channel[$workerId]['value'][] = $message;
                         }
+                    }
+                }
+                // 指定workerId
+                else {
+                    if ($store or isset($channel[$workerId]['futureId'])) {
+                        $channel[$workerId]['value'][] = $message;
                     }
                 }
             }
