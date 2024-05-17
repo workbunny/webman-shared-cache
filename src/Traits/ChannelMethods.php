@@ -80,7 +80,7 @@ trait ChannelMethods
         $func = __FUNCTION__;
         $params = func_get_args();
         self::_Atomic($key, function () use (
-            $key, $message, $func, $params, $store
+            $key, $message, $func, $params, $store, $workerId
         ) {
             /**
              * [
@@ -94,14 +94,31 @@ trait ChannelMethods
             // 如果还没有监听器，将数据投入默认
             if (!$channel) {
                 if ($store) {
-                    $channel['--default--']['value'][] = $message;
+                    // 非指定workerId
+                    if ($workerId !== null) {
+                        $channel['--default--']['value'][] = $message;
+                    }
+                    // 指定workerId
+                    else {
+                        $channel[$workerId]['value'][] = $message;
+                    }
+
                 }
             }
             // 否则将消息投入到每个worker的监听器数据中
             else {
-                foreach ($channel as $workerId => $item) {
-                    if ($store or isset($item['futureId'])) {
+                // 非指定workerId
+                if ($workerId !== null) {
+                    if ($store or isset($channel[$workerId]['futureId'])) {
                         $channel[$workerId]['value'][] = $message;
+                    }
+                }
+                // 指定workerId
+                else {
+                    foreach ($channel as $workerId => $item) {
+                        if ($store or isset($item['futureId'])) {
+                            $channel[$workerId]['value'][] = $message;
+                        }
                     }
                 }
             }
