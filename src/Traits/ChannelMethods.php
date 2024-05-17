@@ -26,11 +26,6 @@ trait ChannelMethods
     protected static array $_listeners = [];
 
     /**
-     * @var array = [channelKey => callback]
-     */
-    protected static array $_listenerCallbacks = [];
-
-    /**
      * @var float|int|null
      */
     protected static float|int|null $interval = null;
@@ -156,17 +151,16 @@ trait ChannelMethods
 
             // 设置回调
             $channel[$workerId]['futureId'] =
-            self::$_listenerCallbacks[$key] = $listener;
             self::$_listeners[$key] =
-            $result = Future::add(function () use ($key, $workerId) {
+            $result = Future::add(function () use ($key, $workerId, $listener) {
                 // 原子性执行
-                self::_Atomic($key, function () use ($key, $workerId) {
+                self::_Atomic($key, function () use ($key, $workerId, $listener) {
                     $channel = self::_Get($channelName = self::GetChannelKey($key), []);
                     if ((!empty($value = $channel[$workerId]['value'] ?? []))) {
                         // 先进先出
                         $msg = array_shift($value);
                         $channel[$workerId]['value'] = $value;
-                        call_user_func(self::$_listenerCallbacks[$key], $key, $workerId, $msg);
+                        call_user_func($listener, $key, $workerId, $msg);
                         self::_Set($channelName, $channel);
                     }
 
@@ -221,7 +215,7 @@ trait ChannelMethods
                     unset($channel[$workerId]);
                     self::_Set($channelName, $channel);
                 }
-                unset(self::$_listeners[$key], self::$_listenerCallbacks[$key]);
+                unset(self::$_listeners[$key]);
             }
 
             return [
