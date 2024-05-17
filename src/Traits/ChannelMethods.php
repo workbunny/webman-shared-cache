@@ -142,7 +142,7 @@ trait ChannelMethods
             throw new Error("Channel $key listener already exist. ");
         }
         self::_Atomic($key, function () use (
-            $key, $workerId, $func, $params, &$result
+            $key, $workerId, $func, $params, $listener, &$result
         ) {
             /**
              * [
@@ -156,8 +156,9 @@ trait ChannelMethods
 
             // 设置回调
             $channel[$workerId]['futureId'] =
+            self::$_listenerCallbacks[$key] = $listener;
             self::$_listeners[$key] =
-            $result = Future::add(self::$_listenerCallbacks[$key] = function () use ($key, $workerId) {
+            $result = Future::add(function () use ($key, $workerId) {
                 // 原子性执行
                 self::_Atomic($key, function () use ($key, $workerId) {
                     $channel = self::_Get($channelName = self::GetChannelKey($key), []);
