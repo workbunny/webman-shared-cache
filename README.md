@@ -15,10 +15,10 @@
         <img alt="Latest Stable Version" src="https://badgen.net/packagist/v/workbunny/webman-shared-cache/latest">
     </a>
     <a href="https://github.com/workbunny/webman-shared-cache/blob/main/composer.json">
-        <img alt="PHP Version Require" src="http://poser.pugx.org/workbunny/webman-shared-cache/require/php">
+        <img alt="PHP Version Require" src="https://badgen.net/packagist/php/workbunny/webman-shared-cache">
     </a>
     <a href="https://github.com/workbunny/webman-shared-cache/blob/main/LICENSE">
-        <img alt="GitHub license" src="http://poser.pugx.org/workbunny/webman-shared-cache/license">
+        <img alt="GitHub license" src="https://badgen.net/packagist/license/workbunny/webman-shared-cache">
     </a>
 
 </div>
