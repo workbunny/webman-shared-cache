@@ -9,14 +9,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class WorkbunnyWebmanSharedCacheList extends AbstractCommand
 {
+    protected static string $defaultName = 'workbunny:shared-cache-list';
+    protected static string $defaultDescription = 'Show workbunny/webman-shared-cache caches list. ';
+
     /**
      * @return void
      */
     protected function configure(): void
     {
-        $this->setName('workbunny:shared-cache-list')
-            ->setDescription('Show workbunny/webman-shared-cache caches list. ');
-
+        $this->setName(static::$defaultName)->setDescription(static::$defaultDescription);
         $this->addOption('page', 'p', InputOption::VALUE_OPTIONAL, 'Page. ', 1);
         $this->addOption('size', 's', InputOption::VALUE_OPTIONAL, 'Page size. ', 20);
     }
