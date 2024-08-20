@@ -118,6 +118,7 @@
   - 支持 HSet/HGet/HDel/HKeys/HExists 
   - 支持 HIncr/HDecr，支持浮点运算
   - 支持 储存对象数据
+  - 支持 HashKey的秒级过期时间【版本 ≥ 0.5】
   
 - **通配符/正则匹配Search**
   ```php
