@@ -10,6 +10,7 @@ namespace Workbunny\WebmanSharedCache\Traits;
  * @method static bool|int|float HIncr(string $key, string|int $hashKey, int|float $value = 1) Hash 自增
  * @method static bool|int|float HDecr(string $key, string|int $hashKey, int|float $value = 1) Hash 自减
  * @method static array HExists(string $key, string|int ...$hashKey) Hash key 判断
+ * @method static void HRecycle(string $key) Hash key 过期回收
  */
 trait HashMethods
 {
@@ -179,6 +180,38 @@ trait HashMethods
         $ttl = $hash[$hashKey]['_ttl'] ?? 0;
         $timestamp = $hash[$hashKey]['_timestamp'] ?? 0;
         return ($ttl <= 0 or (($timestamp + $ttl) >= $now)) ? $value : $default;
+    }
+
+    /**
+     * 回收过期 hashKey
+     *
+     * @param string $key
+     * @return void
+     */
+    protected static function _HRecycle(string $key): void
+    {
+        $func = __FUNCTION__;
+        $params = func_get_args();
+        self::_Atomic($key, function () use (
+            $key, $func, $params
+        ) {
+            $hash = self::_Get($key, []);
+            $now = time();
+            foreach ($hash as $hashKey => $hashValue) {
+                $ttl = $hashValue['_ttl'] ?? 0;
+                $timestamp = $hashValue['_timestamp'] ?? 0;
+                if ($ttl > 0 and $timestamp > 0 and $timestamp + $ttl < $now) {
+                    unset($hash[$hashKey]);
+                }
+            }
+            self::_Set($key, $hash);
+            return [
+                'timestamp' => microtime(true),
+                'method'    => $func,
+                'params'    => $params,
+                'result'    => null
+            ];
+        }, true);
     }
 
     /**
