@@ -196,15 +196,21 @@ trait HashMethods
             $key, $func, $params
         ) {
             $hash = self::_Get($key, []);
-            $now = time();
-            foreach ($hash as $hashKey => $hashValue) {
-                $ttl = $hashValue['_ttl'] ?? 0;
-                $timestamp = $hashValue['_timestamp'] ?? 0;
-                if ($ttl > 0 and $timestamp > 0 and $timestamp + $ttl < $now) {
-                    unset($hash[$hashKey]);
+            if (isset($hash['_ttl']) and isset($hash['_timestamp'])) {
+                $now = time();
+                $set = false;
+                foreach ($hash as $hashKey => $hashValue) {
+                    $ttl = $hashValue['_ttl'] ?? 0;
+                    $timestamp = $hashValue['_timestamp'] ?? 0;
+                    if ($ttl > 0 and $timestamp > 0 and $timestamp + $ttl < $now) {
+                        $set = true;
+                        unset($hash[$hashKey]);
+                    }
+                }
+                if ($set) {
+                    self::_Set($key, $hash);
                 }
             }
-            self::_Set($key, $hash);
             return [
                 'timestamp' => microtime(true),
                 'method'    => $func,
