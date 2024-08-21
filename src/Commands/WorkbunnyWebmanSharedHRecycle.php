@@ -39,22 +39,11 @@ class WorkbunnyWebmanSharedCacheHRecycle extends AbstractCommand
             $keys = Cache::Keys();
             $progressBar->setMaxSteps(count($keys));
             foreach ($keys as $key) {
-                $value = Cache::Get($key);
-                if (
-                    ($value['_ttl'] ?? null) and ($value['_timestamp'] ?? null)) {
-                    Cache::HRecycle($key);
-                }
+                Cache::HRecycle($key);
+                $progressBar->advance();
             }
+            $progressBar->finish();
         }
-        $headers = ['name', 'value'];
-        $rows = [];
-        // todo
-
-        $table = new Table($output);
-        $table->setHeaders($headers);
-        $table->setRows($rows);
-        $table->render();
-
-        return self::SUCCESS;
+        return $this->success($output, 'HRecycle Success. ');
     }
 }
