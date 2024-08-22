@@ -14,4 +14,5 @@ declare(strict_types=1);
 return [
     Workbunny\WebmanSharedCache\Commands\WorkbunnyWebmanSharedCacheEnable::class,
     Workbunny\WebmanSharedCache\Commands\WorkbunnyWebmanSharedCacheClean::class,
+    Workbunny\WebmanSharedCache\Commands\WorkbunnyWebmanSharedCacheHRecycle::class
 ];
