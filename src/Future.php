@@ -36,12 +36,11 @@ class Future
             throw new Error("Event driver error. ");
         }
 
-        if ($id = Worker::$globalEvent->add(
-            Worker::$eventLoopClass === Event::class ? 0 : 0.001,
-            EventInterface::EV_TIMER,
-            $func,
-            $args
-        )) {
+        $interval = Worker::$eventLoopClass === Event::class ? 0 : 0.001;
+        if ($id = method_exists(Worker::$globalEvent, 'delay')
+            ? Worker::$globalEvent->delay($interval, $func, $args)
+            : Worker::$globalEvent->add($interval, EventInterface::EV_TIMER, $func, $args)
+        ) {
             self::$_futures[$id] = $func;
         }
 
@@ -65,15 +64,21 @@ class Future
         }
 
         if ($id !== null) {
-            Worker::$globalEvent->del(
-                $id, EventInterface::EV_TIMER);
+            if (method_exists(Worker::$globalEvent, 'offDelay')) {
+                Worker::$globalEvent->offDelay($id);
+            } else {
+                Worker::$globalEvent->del($id, EventInterface::EV_TIMER);
+            }
             unset(self::$_futures[$id]);
             return;
         }
 
         foreach(self::$_futures as $id => $fuc) {
-            Worker::$globalEvent->del(
-                $id, EventInterface::EV_TIMER);
+            if (method_exists(Worker::$globalEvent, 'offDelay')) {
+                Worker::$globalEvent->offDelay($id);
+            } else {
+                Worker::$globalEvent->del($id, EventInterface::EV_TIMER);
+            }
             unset(self::$_futures[$id]);
         }
     }
