@@ -21,9 +21,23 @@ trait ChannelMethods
     protected static string $_CHANNEL = '#Channel#';
 
     /**
-     * @var array = [channelKey => listeners]
+     * @var array = [channelKey => futureId]
      */
     protected static array $_listeners = [];
+
+    /**
+     * @var float|int|null
+     */
+    protected static float|int|null $interval = null;
+
+    /**
+     * @param float|int|null $interval
+     * @return void
+     */
+    public static function SetChannelListenerInterval(float|int|null $interval): void
+    {
+        self::$interval = $interval;
+    }
 
     /**
      * @param string $key
@@ -66,7 +80,7 @@ trait ChannelMethods
         $func = __FUNCTION__;
         $params = func_get_args();
         self::_Atomic($key, function () use (
-            $key, $message, $func, $params, $store
+            $key, $message, $func, $params, $store, $workerId
         ) {
             /**
              * [
@@ -80,13 +94,30 @@ trait ChannelMethods
             // 如果还没有监听器，将数据投入默认
             if (!$channel) {
                 if ($store) {
-                    $channel['--default--']['value'][] = $message;
+                    // 非指定workerId
+                    if ($workerId === null) {
+                        $channel['--default--']['value'][] = $message;
+                    }
+                    // 指定workerId
+                    else {
+                        $channel[$workerId]['value'][] = $message;
+                    }
+
                 }
             }
             // 否则将消息投入到每个worker的监听器数据中
             else {
-                foreach ($channel as $workerId => $item) {
-                    if ($store or isset($item['futureId'])) {
+                // 非指定workerId
+                if ($workerId === null) {
+                    foreach ($channel as $workerId => $item) {
+                        if ($store or isset($item['futureId'])) {
+                            $channel[$workerId]['value'][] = $message;
+                        }
+                    }
+                }
+                // 指定workerId
+                else {
+                    if ($store or isset($channel[$workerId]['futureId'])) {
                         $channel[$workerId]['value'][] = $message;
                     }
                 }
@@ -123,7 +154,7 @@ trait ChannelMethods
             throw new Error("Channel $key listener already exist. ");
         }
         self::_Atomic($key, function () use (
-            $key, $workerId, $func, $params, &$result
+            $key, $workerId, $func, $params, $listener, &$result
         ) {
             /**
              * [
@@ -138,20 +169,20 @@ trait ChannelMethods
             // 设置回调
             $channel[$workerId]['futureId'] =
             self::$_listeners[$key] =
-            $result = Future::add(function () use ($key, $workerId) {
+            $result = Future::add(function () use ($key, $workerId, $listener) {
                 // 原子性执行
-                self::_Atomic($key, function () use ($key, $workerId) {
+                self::_Atomic($key, function () use ($key, $workerId, $listener) {
                     $channel = self::_Get($channelName = self::GetChannelKey($key), []);
                     if ((!empty($value = $channel[$workerId]['value'] ?? []))) {
                         // 先进先出
                         $msg = array_shift($value);
                         $channel[$workerId]['value'] = $value;
-                        call_user_func(self::$_listeners[$key], $key, $workerId, $msg);
+                        call_user_func($listener, $key, $workerId, $msg);
                         self::_Set($channelName, $channel);
                     }
 
                 });
-            });
+            }, interval: self::$interval);
             $channel[$workerId]['value'] = [];
             // 如果存在默认数据
             if ($default = $channel['--default--']['value'] ?? []) {
@@ -202,7 +233,6 @@ trait ChannelMethods
                     self::_Set($channelName, $channel);
                 }
                 unset(self::$_listeners[$key]);
-
             }
 
             return [

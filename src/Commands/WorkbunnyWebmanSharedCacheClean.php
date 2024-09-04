@@ -10,13 +10,15 @@ use Workbunny\WebmanSharedCache\Cache;
 
 class WorkbunnyWebmanSharedCacheClean extends AbstractCommand
 {
+    protected static string $defaultName = 'workbunny:shared-cache-clean';
+    protected static string $defaultDescription = 'Remove all workbunny/webman-shared-cache caches. ';
+
     /**
      * @return void
      */
     protected function configure(): void
     {
-        $this->setName('workbunny:shared-cache-clean')
-            ->setDescription('Remove all workbunny/webman-shared-cache caches. ');
+        $this->setName(static::$defaultName)->setDescription(static::$defaultDescription);
     }
 
     /**

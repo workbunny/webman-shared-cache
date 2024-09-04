@@ -22,9 +22,10 @@ class Future
     /**
      * @param Closure $func
      * @param array $args
+     * @param float|int|null $interval
      * @return int|false
      */
-    public static function add(Closure $func, array $args = []): int|false
+    public static function add(Closure $func, array $args = [], float|int|null $interval = null): int|false
     {
         if (self::$debug) {
             self::$debugFunc = $func;

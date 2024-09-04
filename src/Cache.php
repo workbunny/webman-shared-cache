@@ -40,7 +40,7 @@ class Cache
                 throw new Error('PHP-ext apcu not enable. ');
             }
             if (!apcu_enabled()) {
-                throw new Error('You need run shared-cache-enable.sh. ');
+                throw new Error('You need run workbunny:shared-cache-enable/shared-cache-enable.sh command to enable APCu. ');
             }
             return call_user_func([self::class, "_$name"], ...$arguments);
         }

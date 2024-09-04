@@ -13,7 +13,11 @@ class HashTest extends BaseTestCase
         // 单进程执行
         $this->assertEquals(null, Cache::HGet($key, $hash));
         apcu_add($key, [
-            $hash => $hash
+            $hash => [
+                '_value'     => $hash,
+                '_ttl'       => 0,
+                '_timestamp' => time()
+            ]
         ]);
         $this->assertEquals([], Cache::LockInfo());
         $this->assertEquals($hash, Cache::HGet($key, $hash));
@@ -24,7 +28,11 @@ class HashTest extends BaseTestCase
         $this->assertEquals(null, Cache::HGet($key, $hash));
         $this->childExec(static function (string $key, string $hash) {
             apcu_add($key, [
-                $hash => $hash
+                $hash => [
+                    '_value'     => $hash,
+                    '_ttl'       => 0,
+                    '_timestamp' => time()
+                ]
             ]);
         }, $key, $hash);
         $this->assertEquals([], Cache::LockInfo());
@@ -42,7 +50,11 @@ class HashTest extends BaseTestCase
         $this->assertTrue(Cache::HSet($key, $hash, $hash));
         $this->assertEquals([], Cache::LockInfo());
         $this->assertEquals([
-            $hash => $hash
+            $hash => [
+                '_value'     => $hash,
+                '_ttl'       => 0,
+                '_timestamp' => time()
+            ]
         ], apcu_fetch($key));
         // 清理
         apcu_delete($key);
@@ -54,7 +66,11 @@ class HashTest extends BaseTestCase
         }, $key, $hash);
         $this->assertEquals([], Cache::LockInfo());
         $this->assertEquals([
-            $hash => $hash
+            $hash => [
+                '_value'     => $hash,
+                '_ttl'       => 0,
+                '_timestamp' => time()
+            ]
         ], apcu_fetch($key));
         // 清理
         apcu_delete($key);
@@ -98,8 +114,12 @@ class HashTest extends BaseTestCase
 
         $this->assertEquals([], Cache::HExists($key, 'a'));
         apcu_add($key, [
-            'a' => 1,
-            'b' => 2
+            'a' => [
+                '_value' => 1
+            ],
+            'b' => [
+                '_value' => 2
+            ]
         ]);
         $this->assertEquals([
             'a' => true, 'b' => true
@@ -116,15 +136,27 @@ class HashTest extends BaseTestCase
         $this->assertFalse(apcu_fetch($key));
         $this->assertEquals(1, Cache::HIncr($key, 'a'));
         $this->assertEquals([
-            'a' => 1
+            'a' => [
+                '_value'     => 1,
+                '_ttl'       => 0,
+                '_timestamp' => time()
+            ]
         ], apcu_fetch($key));
         $this->assertEquals(3, Cache::HIncr($key, 'a', 2));
         $this->assertEquals([
-            'a' => 3
+            'a' => [
+                '_value'     => 3,
+                '_ttl'       => 0,
+                '_timestamp' => time()
+            ]
         ], apcu_fetch($key));
         $this->assertEquals(4.1, Cache::HIncr($key, 'a', 1.1));
         $this->assertEquals([
-            'a' => 4.1
+            'a' => [
+                '_value'     => 4.1,
+                '_ttl'       => 0,
+                '_timestamp' => time()
+            ]
         ], apcu_fetch($key));
         // 清理
         apcu_delete($key);
@@ -135,19 +167,31 @@ class HashTest extends BaseTestCase
             Cache::HIncr($key, 'a');
         }, $key);
         $this->assertEquals([
-            'a' => 1
+            'a' => [
+                '_value'     => 1,
+                '_ttl'       => 0,
+                '_timestamp' => time()
+            ]
         ], apcu_fetch($key));
         $this->childExec(static function (string $key) {
             Cache::HIncr($key, 'a',2);
         }, $key);
         $this->assertEquals([
-            'a' => 3
+            'a' => [
+                '_value'     => 3,
+                '_ttl'       => 0,
+                '_timestamp' => time()
+            ]
         ], apcu_fetch($key));
         $this->childExec(static function (string $key) {
             Cache::HIncr($key, 'a',1.1);
         }, $key);
         $this->assertEquals([
-            'a' => 4.1
+            'a' => [
+                '_value'     => 4.1,
+                '_ttl'       => 0,
+                '_timestamp' => time()
+            ]
         ], apcu_fetch($key));
         // 清理
         apcu_delete($key);
@@ -160,15 +204,27 @@ class HashTest extends BaseTestCase
         $this->assertFalse(apcu_fetch($key));
         $this->assertEquals(-1, Cache::HDecr($key, 'a'));
         $this->assertEquals([
-            'a' => -1
+            'a' => [
+                    '_value'     => -1,
+                    '_ttl'       => 0,
+                    '_timestamp' => time()
+                ]
         ], apcu_fetch($key));
         $this->assertEquals(-3, Cache::HDecr($key, 'a', 2));
         $this->assertEquals([
-            'a' => -3
+            'a' => [
+                '_value'     => -3,
+                '_ttl'       => 0,
+                '_timestamp' => time()
+            ]
         ], apcu_fetch($key));
         $this->assertEquals(-4.1, Cache::HDecr($key, 'a', 1.1));
         $this->assertEquals([
-            'a' => -4.1
+            'a' => [
+                '_value'     => -4.1,
+                '_ttl'       => 0,
+                '_timestamp' => time()
+            ]
         ], apcu_fetch($key));
         // 清理
         apcu_delete($key);
@@ -179,19 +235,31 @@ class HashTest extends BaseTestCase
             Cache::HDecr($key, 'a');
         }, $key);
         $this->assertEquals([
-            'a' => -1
+            'a' => [
+                '_value'     => -1,
+                '_ttl'       => 0,
+                '_timestamp' => time()
+            ]
         ], apcu_fetch($key));
         $this->childExec(static function (string $key) {
             Cache::HDecr($key, 'a', 2);
         }, $key);
         $this->assertEquals([
-            'a' => -3
+            'a' => [
+                '_value'     => -3,
+                '_ttl'       => 0,
+                '_timestamp' => time()
+            ]
         ], apcu_fetch($key));
         $this->childExec(static function (string $key) {
             Cache::HDecr($key, 'a', 1.1);
         }, $key);
         $this->assertEquals([
-            'a' => -4.1
+            'a' => [
+                '_value'     => -4.1,
+                '_ttl'       => 0,
+                '_timestamp' => time()
+            ]
         ], apcu_fetch($key));
         // 清理
         apcu_delete($key);

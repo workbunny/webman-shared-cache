@@ -8,20 +8,17 @@
 
 
 <div align="center">
-    <!--<a href="https://github.com/workbunny/webman-shared-cache/actions">
+    <a href="https://github.com/workbunny/webman-shared-cache/actions">
         <img src="https://github.com/workbunny/webman-shared-cache/actions/workflows/CI.yml/badge.svg" alt="Build Status">
-    </a>-->
-    <a href="https://github.com/workbunny/webman-shared-cache/releases">
-        <img alt="Latest Stable Version" src="https://badgen.net/packagist/v/workbunny/webman-shared-cache/latest">
     </a>
     <a href="https://github.com/workbunny/webman-shared-cache/releases">
         <img alt="Latest Stable Version" src="https://badgen.net/packagist/v/workbunny/webman-shared-cache/latest">
     </a>
     <a href="https://github.com/workbunny/webman-shared-cache/blob/main/composer.json">
-        <img alt="PHP Version Require" src="http://poser.pugx.org/workbunny/webman-shared-cache/require/php">
+        <img alt="PHP Version Require" src="https://badgen.net/packagist/php/workbunny/webman-shared-cache">
     </a>
     <a href="https://github.com/workbunny/webman-shared-cache/blob/main/LICENSE">
-        <img alt="GitHub license" src="http://poser.pugx.org/workbunny/webman-shared-cache/license">
+        <img alt="GitHub license" src="https://badgen.net/packagist/license/workbunny/webman-shared-cache">
     </a>
 
 </div>
@@ -121,6 +118,7 @@
   - 支持 HSet/HGet/HDel/HKeys/HExists 
   - 支持 HIncr/HDecr，支持浮点运算
   - 支持 储存对象数据
+  - 支持 HashKey的秒级过期时间【版本 ≥ 0.5】
   
 - **通配符/正则匹配Search**
   ```php
@@ -138,6 +136,8 @@
       }
   );
   ```
+  **Tips：Cache::Search()本质上是个扫表匹配的过程，是O(N)的操作，如果需要对特定族群的数据进行监听，推荐使用Channel相关函数实现监听。**
+
 
 - **原子性执行**
   ```php
