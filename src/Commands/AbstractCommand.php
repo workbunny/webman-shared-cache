@@ -12,14 +12,14 @@ abstract class AbstractCommand extends Command
      *
      * @var string
      */
-    protected static string $defaultName = '';
+    protected static $defaultName = '';
 
     /**
      * 兼容webman console，需重写
      *
      * @var string
      */
-    protected static string $defaultDescription = '';
+    protected static $defaultDescription = '';
 
     /**
      * 输出info
