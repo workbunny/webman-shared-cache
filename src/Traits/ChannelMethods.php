@@ -20,21 +20,24 @@ trait ChannelMethods
     /** @var string 通道前缀 */
     protected static string $_CHANNEL = '#Channel#';
 
+    /** @var string 通道pid列表 */
+    protected static string $_CHANNEL_PID_LIST = '#ChannelPidList#';
+
     /**
      * @var array = [channelKey => futureId]
      */
     protected static array $_listeners = [];
 
     /**
-     * @var float|int|null
+     * @var float|int
      */
-    protected static float|int|null $interval = null;
+    protected static float|int $interval = 0;
 
     /**
-     * @param float|int|null $interval
+     * @param float|int $interval
      * @return void
      */
-    public static function SetChannelListenerInterval(float|int|null $interval): void
+    public static function SetChannelListenerInterval(float|int $interval): void
     {
         self::$interval = $interval;
     }
@@ -46,6 +49,27 @@ trait ChannelMethods
     public static function GetChannelKey(string $key): string
     {
         return self::$_CHANNEL . $key;
+    }
+
+    /**
+     * 通道全局开启使用信号监听
+     *
+     * @param bool $enable
+     * @return void
+     */
+    public static function channelUseSignalEnable(bool $enable = true): void
+    {
+        Future::$useSignal = $enable;
+    }
+
+    /**
+     * 通道是否使用信号监听
+     *
+     * @return bool
+     */
+    public static function isChannelUseSignal(): bool
+    {
+        return Future::$useSignal;
     }
 
     /**
@@ -124,6 +148,13 @@ trait ChannelMethods
             }
 
             self::_Set($channelName, $channel);
+            // 使用信号监听
+            if (self::isChannelUseSignal()) {
+                $list = self::_Get(self::$_CHANNEL_PID_LIST, []);
+                foreach ($list as $pid) {
+                    @posix_kill($pid, Future::$signal);
+                }
+            }
             return [
                 'timestamp' => microtime(true),
                 'method'    => $func,
@@ -156,6 +187,12 @@ trait ChannelMethods
         self::_Atomic($key, function () use (
             $key, $workerId, $func, $params, $listener, &$result
         ) {
+            // 信号监听则注册pid
+            if (self::isChannelUseSignal()) {
+                $channelPidList = self::_Get(self::$_CHANNEL_PID_LIST, []);
+                $channelPidList[$pid = posix_getpid()] = $pid;
+                self::_Set(self::$_CHANNEL_PID_LIST, $channelPidList);
+            }
             /**
              * [
              *  workerId = [
@@ -165,11 +202,7 @@ trait ChannelMethods
              * ]
              */
             $channel = self::_Get($channelName = self::GetChannelKey($key), []);
-
-            // 设置回调
-            $channel[$workerId]['futureId'] =
-            self::$_listeners[$key] =
-            $result = Future::add(function () use ($key, $workerId, $listener) {
+            $callback = function () use ($key, $workerId, $listener) {
                 // 原子性执行
                 self::_Atomic($key, function () use ($key, $workerId, $listener) {
                     $channel = self::_Get($channelName = self::GetChannelKey($key), []);
@@ -182,7 +215,9 @@ trait ChannelMethods
                     }
 
                 });
-            }, interval: self::$interval);
+            };
+            // 设置回调
+            $channel[$workerId]['futureId'] = self::$_listeners[$key] = $result = Future::add($callback, interval: self::$interval);
             $channel[$workerId]['value'] = [];
             // 如果存在默认数据
             if ($default = $channel['--default--']['value'] ?? []) {
@@ -218,7 +253,16 @@ trait ChannelMethods
             $key, $workerId, $func, $params, $remove
         ) {
             if ($id = self::$_listeners[$key] ?? null) {
+                // 移除future
                 Future::del($id);
+                // 信号监听则注册pid
+                if (self::isChannelUseSignal()) {
+                    $channelPidList = self::_Get(self::$_CHANNEL_PID_LIST, []);
+                    if ($channelPidList[$pid = posix_getpid()] ?? null) {
+                        unset($channelPidList[$pid]);
+                        self::_Set(self::$_CHANNEL_PID_LIST, $channelPidList);
+                    }
+                }
                 if ($remove) {
                     /**
                      * [
@@ -234,7 +278,6 @@ trait ChannelMethods
                 }
                 unset(self::$_listeners[$key]);
             }
-
             return [
                 'timestamp' => microtime(true),
                 'method'    => $func,
