@@ -10,8 +10,8 @@ use Workbunny\WebmanSharedCache\Cache;
 
 class WorkbunnyWebmanSharedCacheHRecycle extends AbstractCommand
 {
-    protected static string $defaultName = 'workbunny:shared-cache-hrecycle';
-    protected static string $defaultDescription = 'Manually recycle expired hashKeys. ';
+    protected static $defaultName = 'workbunny:shared-cache-hrecycle';
+    protected static $defaultDescription = 'Manually recycle expired hashKeys. ';
 
     /**
      * @return void
