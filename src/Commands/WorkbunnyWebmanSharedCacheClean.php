@@ -10,8 +10,8 @@ use Workbunny\WebmanSharedCache\Cache;
 
 class WorkbunnyWebmanSharedCacheClean extends AbstractCommand
 {
-    protected static string $defaultName = 'workbunny:shared-cache-clean';
-    protected static string $defaultDescription = 'Remove all workbunny/webman-shared-cache caches. ';
+    protected static $defaultName = 'workbunny:shared-cache-clean';
+    protected static $defaultDescription = 'Remove all workbunny/webman-shared-cache caches. ';
 
     /**
      * @return void
