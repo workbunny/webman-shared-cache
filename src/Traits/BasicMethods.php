@@ -46,8 +46,9 @@ trait BasicMethods
      */
     public static function WildcardToRegex(string $match): string
     {
-        $regex = str_replace('*', '.+', $match);
-        $regex = str_replace('?', '.', $regex);
+        $regex = preg_quote($match, '/'); // 对特殊字符进行转义
+        $regex = str_replace('\*', '.+', $regex);
+        $regex = str_replace('\?', '.', $regex);
         return '/^' . $regex . '$/';
     }
 
