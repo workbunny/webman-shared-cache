@@ -10,8 +10,8 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 class WorkbunnyWebmanSharedCacheEnable extends AbstractCommand
 {
-    protected static string $defaultName = 'workbunny:shared-cache-enable';
-    protected static string $defaultDescription = 'Enable APCu cache with specified settings. ';
+    protected static $defaultName = 'workbunny:shared-cache-enable';
+    protected static $defaultDescription = 'Enable APCu cache with specified settings. ';
 
     /**
      * @return void
