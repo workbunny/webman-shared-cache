@@ -59,7 +59,7 @@ trait ChannelMethods
      */
     public static function channelUseSignalEnable(bool $enable = true): void
     {
-        Future::$useSignal = $enable;
+        Future::$driver = $enable ? Future::DRIVER_SIGNAL : Future::DRIVER_TIMER;
     }
 
     /**
@@ -69,7 +69,7 @@ trait ChannelMethods
      */
     public static function isChannelUseSignal(): bool
     {
-        return Future::$useSignal;
+        return Future::$driver === Future::DRIVER_SIGNAL;
     }
 
     /**

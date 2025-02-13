@@ -4,6 +4,7 @@ namespace Workbunny\WebmanSharedCache;
 
 use Closure;
 use Error;
+use Workerman\Coroutine;
 use Workerman\Events\Event;
 use Workerman\Events\EventInterface;
 use Workerman\Worker;
@@ -14,8 +15,13 @@ class Future
     public static ?Closure $debugFunc = null;
     public static array $debugArgs = [];
 
-    /** @var bool 使用信号监听 */
-    public static bool $useSignal = false;
+
+    public const DRIVER_TIMER      = 'timer';
+    public const DRIVER_SIGNAL     = 'signal';
+    public const DRIVER_COROUTINE  = 'coroutine';
+
+    /** @var string 默认驱动 */
+    public static string $driver = self::DRIVER_TIMER;
 
     // todo 因为event等事件循环库是对标准信号的监听，所以不能使用自定实时信号SIGRTMIN ~ SIGRTMAX
     // todo 暂时使用SIGPOLL，异步IO监听信号，可能影响异步文件IO相关的触发
@@ -23,7 +29,7 @@ class Future
     public static int $signal = \SIGPOLL;
 
     /**
-     * @var array = [id => func]
+     * @var array<int|string, callable|Coroutine\Coroutine\CoroutineInterface> = [id => func|coroutine]
      */
     protected static array $_futures = [];
 
@@ -45,31 +51,41 @@ class Future
             throw new Error("Event driver error. ");
         }
 
-        // 使用信号监听
-        if (self::$useSignal) {
-            $id = false;
-            if (
-                method_exists(Worker::$globalEvent, 'onSignal')
-                    ? Worker::$globalEvent->onSignal(self::$signal, function () use ($func, $args) {
+        switch (self::$driver) {
+            # 协程
+            case self::DRIVER_COROUTINE:
+                $coroutine = Coroutine::create(function () use ($func, $args) {
+                    Coroutine::suspend();
+                    call_user_func($func, $args);
+                });
+                $id = $coroutine->id();
+                self::$_futures[$id] = $coroutine;
+                break;
+            # 信号
+            case self::DRIVER_SIGNAL:
+                $id = false;
+                if (method_exists(Worker::$globalEvent, 'onSignal')) {
+                    Worker::$globalEvent->onSignal(self::$signal, function () use ($func, $args) {
                         call_user_func($func, $args);
-                    })
-                    : Worker::$globalEvent->add(self::$signal, EventInterface::EV_SIGNAL, $func, $args)
-            ) {
+                    });
+                } else {
+                    Worker::$globalEvent->add(self::$signal, EventInterface::EV_SIGNAL, $func, $args);
+                }
                 self::$_futures[$id = 0] = $func;
-            }
+                break;
+            # 默认定时器
+            case self::DRIVER_TIMER:
+            default:
+                $interval = $interval > 0 ? $interval : (Worker::$eventLoopClass === Event::class ? 0 : 0.001);
+                if (
+                    $id = method_exists(Worker::$globalEvent, 'delay')
+                        ? Worker::$globalEvent->delay($interval, $func, $args)
+                        : Worker::$globalEvent->add($interval, EventInterface::EV_TIMER, $func, $args)
+                ) {
+                    self::$_futures[$id] = $func;
+                }
+                break;
         }
-        // 使用定时器轮询
-        else {
-            $interval = $interval > 0 ? $interval : (Worker::$eventLoopClass === Event::class ? 0 : 0.001);
-            if (
-                $id = method_exists(Worker::$globalEvent, 'delay')
-                    ? Worker::$globalEvent->delay($interval, $func, $args)
-                    : Worker::$globalEvent->add($interval, EventInterface::EV_TIMER, $func, $args)
-            ) {
-                self::$_futures[$id] = $func;
-            }
-        }
-
 
         return $id;
     }
@@ -92,21 +108,35 @@ class Future
 
         $futures = $id === null ? self::$_futures : [$id => (self::$_futures[$id] ?? null)];
         foreach ($futures as $id => $fuc) {
-            // 使用信号监听
-            if (self::$useSignal and $id === 0) {
-                if (method_exists(Worker::$globalEvent, 'offSignal')) {
-                    Worker::$globalEvent->offSignal(self::$signal);
-                } else {
-                    Worker::$globalEvent->del(self::$signal, EventInterface::EV_SIGNAL);
-                }
-            }
-            // 使用定时器轮询
-            else {
-                if (method_exists(Worker::$globalEvent, 'offDelay')) {
-                    Worker::$globalEvent->offDelay($id);
-                } else {
-                    Worker::$globalEvent->del($id, EventInterface::EV_TIMER);
-                }
+            switch (self::$driver) {
+                # 协程
+                case self::DRIVER_COROUTINE:
+                    if (
+                        ($coroutine = self::$_futures[$id] ?? null) and
+                        $coroutine instanceof Coroutine\Coroutine\CoroutineInterface
+                    ) {
+                        $coroutine->resume();
+                    }
+                    break;
+                case self::DRIVER_SIGNAL:
+                    if ($id === 0) {
+                        if (method_exists(Worker::$globalEvent, 'offSignal')) {
+                            Worker::$globalEvent->offSignal(self::$signal);
+                        } else {
+                            Worker::$globalEvent->del(self::$signal, EventInterface::EV_SIGNAL);
+                        }
+                    }
+                    break;
+                # 默认定时器
+                case self::DRIVER_TIMER:
+                    if (method_exists(Worker::$globalEvent, 'offDelay')) {
+                        Worker::$globalEvent->offDelay($id);
+                    } else {
+                        Worker::$globalEvent->del($id, EventInterface::EV_TIMER);
+                    }
+                    break;
+                default:
+                    break;
             }
             unset(self::$_futures[$id]);
         }
