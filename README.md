@@ -273,4 +273,27 @@
   Cache::ChRemoveListener('test', '1', false);
   ```
   
+- **实验性功能：信号通知**
+  - 由于共享内存无法使用事件监听，所以底层使用Timer定时器进行轮询，实验性功能可以开启使用系统信号来监听数据的变化
+  ```php
+  // 设置信号
+  // 因为event等事件循环库是对标准信号的监听，所以不能使用自定实时信号SIGRTMIN ~ SIGRTMAX
+  // 默认暂时使用SIGPOLL，异步IO监听信号，可能影响异步文件IO相关的触发
+  Future::$signal = \SIGPOLL;
+  // 开启信号监听，这时候开启的监听会触发之前的回调和通道回调，不会影响之前的回调
+  Cache::channelUseSignalEnable(true)
+  ```
+  - 当使用的监听信号存在已注册的回调产生回调冲突时，可以手动设置回调事件共享
+  ```php
+  // 设置信号
+  // 因为event等事件循环库是对标准信号的监听，所以不能使用自定实时信号SIGRTMIN ~ SIGRTMAX
+  // 默认暂时使用SIGPOLL
+  Future::$signal = \SIGPOLL;
+  // 假设\SIGPOLL存在一个已注册的回调，YourEventLoop::getCallback(\SIGPOLL)可以获取该事件在当前进程注册的回调响应
+  // 设置回调
+  Future::setSignalCallback(YourEventLoop::getCallback(\SIGPOLL));
+  // 开启信号监听，这时候开启的监听会触发之前的回调和通道回调，不会影响之前的回调
+  Cache::channelUseSignalEnable(true)
+  ```
+  > 通道信号监听维系了一个事件队列，多次触发信号时，回调只会根据事件队列是否存在事件消费标记而执行事件回调
 ### 其他功能具体可以参看代码注释和测试用例

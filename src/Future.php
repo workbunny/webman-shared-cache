@@ -34,6 +34,20 @@ class Future
     protected static array $_futures = [];
 
     /**
+     * @var Closure|null
+     */
+    protected static ?Closure $_signalCallback = null;
+
+    /**
+     * @param Closure|null $func
+     * @return void
+     */
+    public static function setSignalCallback(?Closure $func): void
+    {
+        self::$_signalCallback = $func;
+    }
+
+    /**
      * @param Closure $func
      * @param array $args
      * @param float|int $interval
@@ -63,13 +77,18 @@ class Future
                 break;
             # 信号
             case self::DRIVER_SIGNAL:
-                $id = false;
+                $func = function () use ($func, $args) {
+                    // 触发信号原回调
+                    if (self::$_signalCallback) {
+                        call_user_func(self::$_signalCallback);
+                    }
+                    // 触发信号通道回调
+                    call_user_func($func, $args);
+                };
                 if (method_exists(Worker::$globalEvent, 'onSignal')) {
-                    Worker::$globalEvent->onSignal(self::$signal, function () use ($func, $args) {
-                        call_user_func($func, $args);
-                    });
+                    Worker::$globalEvent->onSignal(self::$signal, $func);
                 } else {
-                    Worker::$globalEvent->add(self::$signal, EventInterface::EV_SIGNAL, $func, $args);
+                    Worker::$globalEvent->add(self::$signal, EventInterface::EV_SIGNAL, $func);
                 }
                 self::$_futures[$id = 0] = $func;
                 break;
@@ -120,10 +139,19 @@ class Future
                     break;
                 case self::DRIVER_SIGNAL:
                     if ($id === 0) {
-                        if (method_exists(Worker::$globalEvent, 'offSignal')) {
-                            Worker::$globalEvent->offSignal(self::$signal);
+                        // 如果有信号回调，则恢复信号回调
+                        if (self::$_signalCallback) {
+                            if (method_exists(Worker::$globalEvent, 'onSignal')) {
+                                Worker::$globalEvent->onSignal(self::$signal, self::$_signalCallback);
+                            } else {
+                                Worker::$globalEvent->add(self::$signal, EventInterface::EV_SIGNAL, self::$_signalCallback);
+                            }
                         } else {
-                            Worker::$globalEvent->del(self::$signal, EventInterface::EV_SIGNAL);
+                            if (method_exists(Worker::$globalEvent, 'offSignal')) {
+                                Worker::$globalEvent->offSignal(self::$signal);
+                            } else {
+                                Worker::$globalEvent->del(self::$signal, EventInterface::EV_SIGNAL);
+                            }
                         }
                     }
                     break;

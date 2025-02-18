@@ -23,6 +23,9 @@ trait ChannelMethods
     /** @var string 通道pid列表 */
     protected static string $_CHANNEL_PID_LIST = '#ChannelPidList#';
 
+    /** @var string 通道事件列表 */
+    protected static string $_CHANNEL_EVENT_LIST = '#ChannelEventList#';
+
     /**
      * @var array = [channelKey => futureId]
      */
@@ -152,7 +155,14 @@ trait ChannelMethods
             if (self::isChannelUseSignal()) {
                 $list = self::_Get(self::$_CHANNEL_PID_LIST, []);
                 foreach ($list as $pid) {
-                    @posix_kill($pid, Future::$signal);
+                    self::_Atomic(self::$_CHANNEL_EVENT_LIST, function () use ($pid) {
+                        // 设置通道事件标记
+                        $channelEventList = self::_Get(self::$_CHANNEL_EVENT_LIST, []);
+                        $channelEventList[$pid][] = 1;
+                        self::_Set(self::$_CHANNEL_EVENT_LIST, $channelEventList);
+                        // 发送信号通知进程
+                        @posix_kill($pid, Future::$signal);
+                    });
                 }
             }
             return [
@@ -202,9 +212,25 @@ trait ChannelMethods
              * ]
              */
             $channel = self::_Get($channelName = self::GetChannelKey($key), []);
+            // 监听器回调函数
             $callback = function () use ($key, $workerId, $listener) {
                 // 原子性执行
                 self::_Atomic($key, function () use ($key, $workerId, $listener) {
+                    // 信号监听
+                    if (self::isChannelUseSignal()) {
+                        $pid = posix_getpid();
+                        // 获取通道事件标记列表
+                        $channelEventList = self::_Get(self::$_CHANNEL_EVENT_LIST, []);
+                        $events = $channelEventList[$pid] ?? [];
+                        // 如果没有事件标记则跳过
+                        if (!array_pop($events)) {
+                            return;
+                        }
+                        // 更新通道事件标记
+                        $channelEventList[$pid] = $events;
+                        self::_Set(self::$_CHANNEL_EVENT_LIST, $channelEventList);
+                    }
+                    // 数据回调
                     $channel = self::_Get($channelName = self::GetChannelKey($key), []);
                     if ((!empty($value = $channel[$workerId]['value'] ?? []))) {
                         // 先进先出
@@ -257,10 +283,18 @@ trait ChannelMethods
                 Future::del($id);
                 // 信号监听则注册pid
                 if (self::isChannelUseSignal()) {
+                    $pid = posix_getpid();
+                    // 移除pid
                     $channelPidList = self::_Get(self::$_CHANNEL_PID_LIST, []);
-                    if ($channelPidList[$pid = posix_getpid()] ?? null) {
+                    if ($channelPidList[$pid] ?? null) {
                         unset($channelPidList[$pid]);
                         self::_Set(self::$_CHANNEL_PID_LIST, $channelPidList);
+                    }
+                    // 移除事件标记
+                    $channelEventList = self::_Get(self::$_CHANNEL_EVENT_LIST, []);
+                    if ($channelEventList[$pid] ?? null) {
+                        unset($channelEventList[$pid]);
+                        self::_Set(self::$_CHANNEL_EVENT_LIST, $channelEventList);
                     }
                 }
                 if ($remove) {

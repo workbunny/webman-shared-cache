@@ -25,7 +25,8 @@
     "webman/console": "^1.0 | ^2.0"
   },
   "suggest": {
-    "webman/console": "Webman-CLI support. "
+    "webman/console": "Webman-CLI support. ",
+    "ext-posix": "Channel signal support. "
   },
   "autoload": {
     "psr-4": {
