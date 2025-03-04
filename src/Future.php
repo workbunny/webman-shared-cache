@@ -26,7 +26,7 @@ class Future
     // todo 因为event等事件循环库是对标准信号的监听，所以不能使用自定实时信号SIGRTMIN ~ SIGRTMAX
     // todo 暂时使用SIGPOLL，异步IO监听信号，可能影响异步文件IO相关的触发
     /** @var int 监听的信号 */
-    public static int $signal = \SIGPOLL;
+    public static int $signal = 29;//SIGPOLL
 
     /**
      * @var array<int|string, callable|Coroutine\Coroutine\CoroutineInterface> = [id => func|coroutine]
