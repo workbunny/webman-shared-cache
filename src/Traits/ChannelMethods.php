@@ -40,7 +40,7 @@ trait ChannelMethods
      * @param float|int $interval
      * @return void
      */
-    public static function SetChannelListenerInterval(float|int $interval): void
+    public static function SetChannelListenerInterval($interval): void
     {
         self::$interval = $interval;
     }
@@ -102,7 +102,7 @@ trait ChannelMethods
      * @param bool $store 在没有监听器时是否进行储存
      * @return bool
      */
-    protected static function _ChPublish(string $key, mixed $message, bool $store = true, null|string|int $workerId = null): bool
+    protected static function _ChPublish(string $key, $message, bool $store = true, $workerId = null): bool
     {
         $func = __FUNCTION__;
         $params = func_get_args();
@@ -185,7 +185,7 @@ trait ChannelMethods
      * @param Closure $listener = function(string $channelName, string|int $workerId, mixed $message) {}
      * @return bool|int 监听器id
      */
-    protected static function _ChCreateListener(string $key, string|int $workerId, Closure $listener): bool|int
+    protected static function _ChCreateListener(string $key, $workerId, Closure $listener)
     {
         $func = __FUNCTION__;
         $result = false;
@@ -243,7 +243,7 @@ trait ChannelMethods
                 });
             };
             // 设置回调
-            $channel[$workerId]['futureId'] = self::$_listeners[$key] = $result = Future::add($callback, interval: self::$interval);
+            $channel[$workerId]['futureId'] = self::$_listeners[$key] = $result = Future::add($callback, [], self::$interval);
             $channel[$workerId]['value'] = [];
             // 如果存在默认数据
             if ($default = $channel['--default--']['value'] ?? []) {
@@ -271,7 +271,7 @@ trait ChannelMethods
      * @param bool $remove 是否移除消息
      * @return void
      */
-    protected static function _ChRemoveListener(string $key, string|int $workerId, bool $remove = false): void
+    protected static function _ChRemoveListener(string $key, $workerId, bool $remove = false): void
     {
         $func = __FUNCTION__;
         $params = func_get_args();

@@ -27,7 +27,7 @@ trait HashMethods
      * @param int $ttl
      * @return bool
      */
-    protected static function _HSet(string $key, string|int $hashKey, mixed $hashValue, int $ttl = 0): bool
+    protected static function _HSet(string $key, $hashKey, $hashValue, int $ttl = 0): bool
     {
         $func = __FUNCTION__;
         $params = func_get_args();
@@ -60,7 +60,7 @@ trait HashMethods
      * @param int $ttl
      * @return bool|int|float
      */
-    protected static function _HIncr(string $key, string|int $hashKey, int|float $hashValue = 1, int $ttl = 0): bool|int|float
+    protected static function _HIncr(string $key, $hashKey, $hashValue = 1, int $ttl = 0)
     {
         $func = __FUNCTION__;
         $result = false;
@@ -101,7 +101,7 @@ trait HashMethods
      * @param int $ttl
      * @return bool|int|float
      */
-    protected static function _HDecr(string $key, string|int $hashKey, int|float $hashValue = 1, int $ttl = 0): bool|int|float
+    protected static function _HDecr(string $key, $hashKey, $hashValue = 1, int $ttl = 0)
     {
         $func = __FUNCTION__;
         $result = false;
@@ -142,7 +142,7 @@ trait HashMethods
      * @param string|int ...$hashKey
      * @return bool
      */
-    protected static function _HDel(string $key, string|int ...$hashKey): bool
+    protected static function _HDel(string $key, ...$hashKey): bool
     {
         $func = __FUNCTION__;
         $params = func_get_args();
@@ -172,7 +172,7 @@ trait HashMethods
      * @param mixed|null $default
      * @return mixed
      */
-    protected static function _HGet(string $key, string|int $hashKey, mixed $default = null): mixed
+    protected static function _HGet(string $key, $hashKey, $default = null)
     {
         $now = time();
         $hash = self::_Get($key, []);
@@ -227,7 +227,7 @@ trait HashMethods
      * @param string|int ...$hashKey
      * @return array
      */
-    protected static function _HExists(string $key, string|int ...$hashKey): array
+    protected static function _HExists(string $key, ...$hashKey): array
     {
         $hash = self::_Get($key, []);
         $result = [];
@@ -249,7 +249,7 @@ trait HashMethods
      * @param string|null $regex
      * @return array
      */
-    protected static function _HKeys(string $key, null|string $regex = null): array
+    protected static function _HKeys(string $key, ?string $regex = null): array
     {
         $hash = self::_Get($key, []);
         $keys = [];

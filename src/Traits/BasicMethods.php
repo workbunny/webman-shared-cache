@@ -7,11 +7,11 @@ use Closure;
 
 /**
  * @method static bool Set(string $key, mixed $value, array $optional = []) 设置缓存值
- * @method static mixed Get(string $key, mixed $default = null) 获取缓存值
+ * @method static Get(string $key, mixed $default = null) 获取缓存值
  * @method static array Del(string ...$keys) 移除缓存
  * @method static array Keys(null|string $regex = null) 获取缓存键
- * @method static bool|int|float Incr(string $key, int|float $value = 1, int $ttl = 0) 自增
- * @method static bool|int|float Decr(string $key, int|float $value = 1, int $ttl = 0) 自减
+ * @method static bool|int|float Incr(string $key, $value = 1, int $ttl = 0) 自增
+ * @method static bool|int|float Decr(string $key, $value = 1, int $ttl = 0) 自减
  * @method static array Exists(string ...$keys) 判断缓存键
  *
  * @method static void Search(string $regex, Closure $handler, int $chunkSize = 100) 搜索键值 - 正则匹配
@@ -199,7 +199,7 @@ trait BasicMethods
      * ]
      * @return bool
      */
-    protected static function _Set(string $key, mixed $value, array $optional = []): bool
+    protected static function _Set(string $key, $value, array $optional = []): bool
     {
         $ttl = intval($optional['EX'] ?? (isset($optional['EXAT']) ? ($optional['EXAT'] - time()) : 0));
         if (in_array('NX', $optional)) {
@@ -234,7 +234,7 @@ trait BasicMethods
      * @param int $ttl
      * @return bool|int|float
      */
-    protected static function _Incr(string $key, int|float $value = 1, int $ttl = 0): bool|int|float
+    protected static function _Incr(string $key, $value = 1, int $ttl = 0)
     {
         $func = __FUNCTION__;
         $result = false;
@@ -265,7 +265,7 @@ trait BasicMethods
      * @param int $ttl
      * @return bool|int|float
      */
-    protected static function _Decr(string $key, int|float $value = 1, int $ttl = 0): bool|int|float
+    protected static function _Decr(string $key, $value = 1, int $ttl = 0)
     {
         $func = __FUNCTION__;
         $result = false;
@@ -308,7 +308,7 @@ trait BasicMethods
      * @param mixed|null $default
      * @return mixed
      */
-    protected static function _Get(string $key, mixed $default = null): mixed
+    protected static function _Get(string $key, $default = null)
     {
         $res = apcu_fetch($key, $success);
         return $success ? $res : $default;
@@ -331,7 +331,7 @@ trait BasicMethods
      * @param string|null $regex
      * @return array
      */
-    protected static function _Keys(null|string $regex = null): array
+    protected static function _Keys(?string $regex = null): array
     {
         $keys = [];
         if ($info = apcu_cache_info()) {
