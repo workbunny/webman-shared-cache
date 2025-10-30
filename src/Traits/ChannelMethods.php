@@ -34,7 +34,7 @@ trait ChannelMethods
     /**
      * @var float|int
      */
-    protected static float|int $interval = 0;
+    protected static $interval = 0;
 
     /**
      * @param float|int $interval
