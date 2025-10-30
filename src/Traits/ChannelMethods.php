@@ -3,8 +3,6 @@
 namespace Workbunny\WebmanSharedCache\Traits;
 
 use Closure;
-use MongoDB\Driver\Exception\RuntimeException;
-use Workbunny\WebmanSharedCache\Cache;
 use Workbunny\WebmanSharedCache\Future;
 use Error;
 
@@ -107,9 +105,8 @@ trait ChannelMethods
     {
         $func = __FUNCTION__;
         $params = func_get_args();
-        $r = false;
-        return $r && self::_Atomic($key, function () use (
-                $key, $message, $func, $params, $store, $workerId, &$r
+        return self::_Atomic($key, function () use (
+                $key, $message, $func, $params, $store, $workerId
             ) {
                 /**
                  * [
@@ -154,7 +151,7 @@ trait ChannelMethods
                 if (self::isChannelUseSignal()) {
                     $list = self::_Get(self::$_CHANNEL_PID_LIST, []);
                     foreach ($list as $pid) {
-                        $r = self::_Atomic(self::$_CHANNEL_EVENT_LIST, function () use ($pid) {
+                        self::_Atomic(self::$_CHANNEL_EVENT_LIST, function () use ($pid) {
                             // 设置通道事件标记
                             $channelEventList = self::_Get(self::$_CHANNEL_EVENT_LIST, []);
                             $channelEventList[$pid][] = 1;
@@ -192,7 +189,7 @@ trait ChannelMethods
         if (isset(self::$_listeners[$key])) {
             throw new Error("Channel $key listener already exist. ");
         }
-        $r = self::_Atomic($key, function () use (
+        self::_Atomic($key, function () use (
             $key, $workerId, $func, $params, $listener, &$result
         ) {
             // 信号监听则注册pid
@@ -213,7 +210,7 @@ trait ChannelMethods
             // 监听器回调函数
             $callback = function () use ($key, $workerId, $listener) {
                 // 原子性执行
-                $r = self::_Atomic($key, function () use ($key, $workerId, $listener) {
+                self::_Atomic($key, function () use ($key, $workerId, $listener) {
                     // 信号监听
                     if (self::isChannelUseSignal()) {
                         $pid = posix_getpid();
@@ -239,9 +236,6 @@ trait ChannelMethods
                     }
 
                 });
-                if (!$r) {
-                    throw new \RuntimeException('Channel callback failed.');
-                }
             };
             // 设置回调
             $channel[$workerId]['futureId'] = self::$_listeners[$key] = $result = Future::add($callback, [], self::$interval);
@@ -261,7 +255,7 @@ trait ChannelMethods
                 'result'    => null
             ];
         }, true);
-        return $r ? $result : false;
+        return $result;
     }
 
     /**
@@ -276,7 +270,7 @@ trait ChannelMethods
     {
         $func = __FUNCTION__;
         $params = func_get_args();
-        $r = self::_Atomic($key, function () use (
+        self::_Atomic($key, function () use (
             $key, $workerId, $func, $params, $remove
         ) {
             if ($id = self::$_listeners[$key] ?? null) {
@@ -320,8 +314,5 @@ trait ChannelMethods
                 'result'    => null
             ];
         }, true);
-        if (!$r) {
-            throw new RuntimeException("Channel {$key} listener remove failed");
-        }
     }
 }

@@ -4,6 +4,7 @@ namespace Workbunny\WebmanSharedCache\Traits;
 
 use APCUIterator;
 use Closure;
+use Workbunny\WebmanSharedCache\AtomicTimeoutException;
 
 /**
  * @method static bool Set(string $key, mixed $value, array $optional = []) 设置缓存值
@@ -142,7 +143,9 @@ trait BasicMethods
             $startTime = time();
             while ($blocking) {
                 // 阻塞保险
-                if (time() >= $startTime + self::$fuse) {return false;}
+                if (time() >= $startTime + self::$fuse) {
+                    throw new AtomicTimeoutException('Atomic operation timeout');
+                }
                 // 创建锁
                 apcu_entry($lock = self::GetLockKey($lockKey), function () use (
                     $lockKey, $handler, $func, &$result, &$blocking
@@ -239,7 +242,7 @@ trait BasicMethods
         $func = __FUNCTION__;
         $result = false;
         $params = func_get_args();
-        $r = self::_Atomic($key, function () use (
+        self::_Atomic($key, function () use (
             $key, $value, $ttl, $func, $params, &$result
         ) {
             $v = self::_Get($key, 0);
@@ -256,7 +259,7 @@ trait BasicMethods
                 'result'    => null
             ];
         }, true);
-        return $r ? $result : false;
+        return $result;
     }
 
     /**
@@ -270,7 +273,7 @@ trait BasicMethods
         $func = __FUNCTION__;
         $result = false;
         $params = func_get_args();
-        $r = self::_Atomic($key, function () use (
+        self::_Atomic($key, function () use (
             $key, $value, $ttl, $func, $params, &$result
         ) {
             $v = self::_Get($key, 0);
@@ -287,7 +290,7 @@ trait BasicMethods
                 'result'    => null
             ];
         }, true);
-        return $r ? $result : false;
+        return $result;
     }
 
     /**
