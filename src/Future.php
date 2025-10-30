@@ -53,7 +53,7 @@ class Future
      * @param float|int $interval
      * @return int|false
      */
-    public static function add(Closure $func, array $args = [], float|int $interval = 0): int|false
+    public static function add(Closure $func, array $args = [], $interval = 0)
     {
         if (self::$debug) {
             self::$debugFunc = $func;
@@ -113,7 +113,7 @@ class Future
      * @param int|null $id
      * @return void
      */
-    public static function del(int|null $id = null): void
+    public static function del(?int $id = null): void
     {
         if (self::$debug) {
             self::$debugFunc = null;
