@@ -239,7 +239,7 @@ trait BasicMethods
         $func = __FUNCTION__;
         $result = false;
         $params = func_get_args();
-        self::_Atomic($key, function () use (
+        $r = self::_Atomic($key, function () use (
             $key, $value, $ttl, $func, $params, &$result
         ) {
             $v = self::_Get($key, 0);
@@ -256,7 +256,7 @@ trait BasicMethods
                 'result'    => null
             ];
         }, true);
-        return $result;
+        return $r ? $result : false;
     }
 
     /**
@@ -270,7 +270,7 @@ trait BasicMethods
         $func = __FUNCTION__;
         $result = false;
         $params = func_get_args();
-        self::_Atomic($key, function () use (
+        $r = self::_Atomic($key, function () use (
             $key, $value, $ttl, $func, $params, &$result
         ) {
             $v = self::_Get($key, 0);
@@ -287,7 +287,7 @@ trait BasicMethods
                 'result'    => null
             ];
         }, true);
-        return $result;
+        return $r ? $result : false;
     }
 
     /**

@@ -86,6 +86,9 @@ class CacheTest extends BaseTestCase
 
     public function testCacheIncr(): void
     {
+        if (version_compare(PHP_VERSION, '8.0.0', '<')) {
+            $this->markTestSkipped('Not Supported PHP 7.4');
+        }
         $key = __METHOD__;
         // 在单进程内
         $this->assertFalse(apcu_fetch($key));
@@ -120,6 +123,9 @@ class CacheTest extends BaseTestCase
 
     public function testCacheDecr(): void
     {
+        if (version_compare(PHP_VERSION, '8.0.0', '<')) {
+            $this->markTestSkipped('Not Supported PHP 7.4');
+        }
         $key = __METHOD__;
         // 在单进程内
         $this->assertFalse(apcu_fetch($key));

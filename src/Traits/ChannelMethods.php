@@ -3,6 +3,7 @@
 namespace Workbunny\WebmanSharedCache\Traits;
 
 use Closure;
+use MongoDB\Driver\Exception\RuntimeException;
 use Workbunny\WebmanSharedCache\Cache;
 use Workbunny\WebmanSharedCache\Future;
 use Error;
@@ -106,73 +107,70 @@ trait ChannelMethods
     {
         $func = __FUNCTION__;
         $params = func_get_args();
-        self::_Atomic($key, function () use (
-            $key, $message, $func, $params, $store, $workerId
-        ) {
-            /**
-             * [
-             *  workerId = [
-             *      'futureId' => futureId,
-             *      'value'    => array
-             *  ]
-             * ]
-             */
-            $channel = self::_Get($channelName = self::GetChannelKey($key), []);
-            // 如果还没有监听器，将数据投入默认
-            if (!$channel) {
-                if ($store) {
+        $r = false;
+        return $r && self::_Atomic($key, function () use (
+                $key, $message, $func, $params, $store, $workerId, &$r
+            ) {
+                /**
+                 * [
+                 *  workerId = [
+                 *      'futureId' => futureId,
+                 *      'value'    => array
+                 *  ]
+                 * ]
+                 */
+                $channel = self::_Get($channelName = self::GetChannelKey($key), []);
+                // 如果还没有监听器，将数据投入默认
+                if (!$channel) {
+                    if ($store) {
+                        // 非指定workerId
+                        if ($workerId === null) {
+                            $channel['--default--']['value'][] = $message;
+                        } // 指定workerId
+                        else {
+                            $channel[$workerId]['value'][] = $message;
+                        }
+
+                    }
+                } // 否则将消息投入到每个worker的监听器数据中
+                else {
                     // 非指定workerId
                     if ($workerId === null) {
-                        $channel['--default--']['value'][] = $message;
-                    }
-                    // 指定workerId
+                        foreach ($channel as $workerId => $item) {
+                            if ($store or isset($item['futureId'])) {
+                                $channel[$workerId]['value'][] = $message;
+                            }
+                        }
+                    } // 指定workerId
                     else {
-                        $channel[$workerId]['value'][] = $message;
-                    }
-
-                }
-            }
-            // 否则将消息投入到每个worker的监听器数据中
-            else {
-                // 非指定workerId
-                if ($workerId === null) {
-                    foreach ($channel as $workerId => $item) {
-                        if ($store or isset($item['futureId'])) {
+                        if ($store or isset($channel[$workerId]['futureId'])) {
                             $channel[$workerId]['value'][] = $message;
                         }
                     }
                 }
-                // 指定workerId
-                else {
-                    if ($store or isset($channel[$workerId]['futureId'])) {
-                        $channel[$workerId]['value'][] = $message;
+
+                self::_Set($channelName, $channel);
+                // 使用信号监听
+                if (self::isChannelUseSignal()) {
+                    $list = self::_Get(self::$_CHANNEL_PID_LIST, []);
+                    foreach ($list as $pid) {
+                        $r = self::_Atomic(self::$_CHANNEL_EVENT_LIST, function () use ($pid) {
+                            // 设置通道事件标记
+                            $channelEventList = self::_Get(self::$_CHANNEL_EVENT_LIST, []);
+                            $channelEventList[$pid][] = 1;
+                            self::_Set(self::$_CHANNEL_EVENT_LIST, $channelEventList);
+                            // 发送信号通知进程
+                            @posix_kill($pid, Future::$signal);
+                        });
                     }
                 }
-            }
-
-            self::_Set($channelName, $channel);
-            // 使用信号监听
-            if (self::isChannelUseSignal()) {
-                $list = self::_Get(self::$_CHANNEL_PID_LIST, []);
-                foreach ($list as $pid) {
-                    self::_Atomic(self::$_CHANNEL_EVENT_LIST, function () use ($pid) {
-                        // 设置通道事件标记
-                        $channelEventList = self::_Get(self::$_CHANNEL_EVENT_LIST, []);
-                        $channelEventList[$pid][] = 1;
-                        self::_Set(self::$_CHANNEL_EVENT_LIST, $channelEventList);
-                        // 发送信号通知进程
-                        @posix_kill($pid, Future::$signal);
-                    });
-                }
-            }
-            return [
-                'timestamp' => microtime(true),
-                'method'    => $func,
-                'params'    => $params,
-                'result'    => null
-            ];
-        }, true);
-        return true;
+                return [
+                    'timestamp' => microtime(true),
+                    'method' => $func,
+                    'params' => $params,
+                    'result' => null
+                ];
+            }, true);
     }
 
     /**
@@ -194,7 +192,7 @@ trait ChannelMethods
         if (isset(self::$_listeners[$key])) {
             throw new Error("Channel $key listener already exist. ");
         }
-        self::_Atomic($key, function () use (
+        $r = self::_Atomic($key, function () use (
             $key, $workerId, $func, $params, $listener, &$result
         ) {
             // 信号监听则注册pid
@@ -215,7 +213,7 @@ trait ChannelMethods
             // 监听器回调函数
             $callback = function () use ($key, $workerId, $listener) {
                 // 原子性执行
-                self::_Atomic($key, function () use ($key, $workerId, $listener) {
+                $r = self::_Atomic($key, function () use ($key, $workerId, $listener) {
                     // 信号监听
                     if (self::isChannelUseSignal()) {
                         $pid = posix_getpid();
@@ -241,6 +239,9 @@ trait ChannelMethods
                     }
 
                 });
+                if (!$r) {
+                    throw new \RuntimeException('Channel callback failed.');
+                }
             };
             // 设置回调
             $channel[$workerId]['futureId'] = self::$_listeners[$key] = $result = Future::add($callback, [], self::$interval);
@@ -260,7 +261,7 @@ trait ChannelMethods
                 'result'    => null
             ];
         }, true);
-        return $result;
+        return $r ? $result : false;
     }
 
     /**
@@ -275,7 +276,7 @@ trait ChannelMethods
     {
         $func = __FUNCTION__;
         $params = func_get_args();
-        self::_Atomic($key, function () use (
+        $r = self::_Atomic($key, function () use (
             $key, $workerId, $func, $params, $remove
         ) {
             if ($id = self::$_listeners[$key] ?? null) {
@@ -319,5 +320,8 @@ trait ChannelMethods
                 'result'    => null
             ];
         }, true);
+        if (!$r) {
+            throw new RuntimeException("Channel {$key} listener remove failed");
+        }
     }
 }

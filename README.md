@@ -81,12 +81,16 @@
 
 ## 安装
 
+**`PHP7.4`不完全兼容，请勿使用`Cache::Incr` `Cache::Decr`**
+
 1. **自行安装APCu拓展**
 	```shell
-	# 1. pecl安装
-	pecl instanll apcu
+	# 1. pie安装
+    pie install apcu/apcu
 	# 2. docker中请使用安装器安装
 	curl -sSL https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions -o - | sh -s apcu
+    # 3. pecl安装 【不推荐】
+    pecl instanll apcu
 	```
 2. 安装composer包
     ```shell
