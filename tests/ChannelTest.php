@@ -66,7 +66,7 @@ class ChannelTest extends BaseTestCase
         $this->assertEquals([], Cache::GetChannel($channel));
         $this->assertEquals([], Cache::LockInfo());
         // 当前进程执行
-        Cache::ChCreateListener($channel, '1', function (string $key, string|int $workerId, mixed $message) {
+        Cache::ChCreateListener($channel, '1', function (string $key, $workerId, $message) {
             dump($key, $workerId, $message);
         });
         // 确认数据
@@ -93,7 +93,7 @@ class ChannelTest extends BaseTestCase
         $this->assertEquals([], Cache::LockInfo());
         // 子进程执行
         $this->childExec(static function (string $channel, string $message) {
-            Cache::ChCreateListener($channel, '1', function (string $key, string|int $workerId, mixed $message) {
+            Cache::ChCreateListener($channel, '1', function (string $key, $workerId, $message) {
                 dump($key, $workerId, $message);
             });
         }, $channel, $message);
@@ -119,7 +119,7 @@ class ChannelTest extends BaseTestCase
         $this->assertEquals([], Cache::GetChannel($channel));
         $this->assertEquals([], Cache::LockInfo());
         // 当前进程执行
-        Cache::ChCreateListener($channel, '1', function (string $key, string|int $workerId, mixed $message) {
+        Cache::ChCreateListener($channel, '1', function (string $key, $workerId, $message) {
             dump($key, $workerId, $message);
         });
         Cache::ChPublish($channel, $message);
@@ -146,7 +146,7 @@ class ChannelTest extends BaseTestCase
         $this->assertEquals([], Cache::LockInfo());
         // 子进程执行
         $this->childExec(static function (string $channel, string $message) {
-            Cache::ChCreateListener($channel, '1', function (string $key, string|int $workerId, mixed $message) {
+            Cache::ChCreateListener($channel, '1', function (string $key, $workerId, $message) {
                 dump($key, $workerId, $message);
             });
             Cache::ChPublish($channel, $message);
@@ -172,7 +172,7 @@ class ChannelTest extends BaseTestCase
         $this->assertEquals([], Cache::GetChannel($channel));
         $this->assertEquals([], Cache::LockInfo());
         // 当前进程执行
-        Cache::ChCreateListener($channel, '1', function (string $key, string|int $workerId, mixed $message) {
+        Cache::ChCreateListener($channel, '1', function (string $key, $workerId, $message) {
             dump($key, $workerId, $message);
         });
         // 确认数据
@@ -206,7 +206,7 @@ class ChannelTest extends BaseTestCase
         $this->assertEquals([], Cache::GetChannel($channel));
         $this->assertEquals([], Cache::LockInfo());
         // 当前进程执行
-        Cache::ChCreateListener($channel, '1', function (string $key, string|int $workerId, mixed $message) {
+        Cache::ChCreateListener($channel, '1', function (string $key, $workerId, $message) {
             dump($key, $workerId, $message);
         });
         // 确认数据
@@ -237,7 +237,7 @@ class ChannelTest extends BaseTestCase
         $this->assertEquals([], Cache::LockInfo());
         // 子进程执行
         $this->childExec(static function (string $channel, string $message) {
-            Cache::ChCreateListener($channel, '1', function (string $key, string|int $workerId, mixed $message) {
+            Cache::ChCreateListener($channel, '1', function (string $key, $workerId, $message) {
                 dump($key, $workerId, $message);
             });
             Cache::ChRemoveListener($channel, '1', false);
@@ -265,7 +265,7 @@ class ChannelTest extends BaseTestCase
         $this->assertEquals([], Cache::LockInfo());
         // 子进程执行
         $this->childExec(static function (string $channel, string $message) {
-            Cache::ChCreateListener($channel, '1', function (string $key, string|int $workerId, mixed $message) {
+            Cache::ChCreateListener($channel, '1', function (string $key, $workerId, $message) {
                 dump($key, $workerId, $message);
             });
             Cache::ChRemoveListener($channel, '1', true);
