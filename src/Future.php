@@ -97,9 +97,7 @@ class Future
             default:
                 $interval = $interval > 0 ? $interval : (Worker::$eventLoopClass === Event::class ? 0 : 0.001);
                 if (
-                    $id = method_exists(Worker::$globalEvent, 'delay')
-                        ? Worker::$globalEvent->delay($interval, $func, $args)
-                        : Worker::$globalEvent->add($interval, EventInterface::EV_TIMER, $func, $args)
+                    $id = Worker::$globalEvent->add($interval, EventInterface::EV_TIMER, $func, $args)
                 ) {
                     self::$_futures[$id] = $func;
                 }
@@ -157,11 +155,7 @@ class Future
                     break;
                 # 默认定时器
                 case self::DRIVER_TIMER:
-                    if (method_exists(Worker::$globalEvent, 'offDelay')) {
-                        Worker::$globalEvent->offDelay($id);
-                    } else {
-                        Worker::$globalEvent->del($id, EventInterface::EV_TIMER);
-                    }
+                    Worker::$globalEvent->del($id, EventInterface::EV_TIMER);
                     break;
                 default:
                     break;

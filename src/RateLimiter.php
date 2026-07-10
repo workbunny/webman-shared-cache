@@ -41,7 +41,7 @@ class RateLimiter
                     ) {
                         $cache['count'] += 1;
                         Cache::Set($limitKey, $cache, [
-                            'EX' => $config['window_time']
+                            'EX' => max(1, $reset)
                         ]);
                         return $data = [
                             'limit'     => $limit = $config['limit'],
@@ -64,6 +64,16 @@ class RateLimiter
                         'is_limit'  => false,
                     ];
                 });
+                if (!$blocking) {
+                    if (
+                        class_exists(\Workerman\Coroutine::class) &&
+                        \Workerman\Coroutine::isCoroutine()
+                    ) {
+                        \Workerman\Timer::sleep(0.001);
+                    } else {
+                        usleep(1000);
+                    }
+                }
             }
         }
         return $data;

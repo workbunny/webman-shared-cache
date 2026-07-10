@@ -74,10 +74,11 @@ trait HashMethods
             $timestamp = $hash[$hashKey]['_timestamp'] ?? 0;
             if (is_numeric($value)) {
                 $now = time();
-                $value = ($oldTtl <= 0 or (($timestamp + $oldTtl) >= $now)) ? $value : 0;
+                $notExpired = $oldTtl <= 0 or (($timestamp + $oldTtl) >= $now);
+                $value = $notExpired ? $value : 0;
                 $hash[$hashKey] = [
                     '_value'        => $result = $value + $hashValue,
-                    '_ttl'          => ($ttl > 0) ? $ttl : ($timestamp > 0 ? $now - $timestamp : 0),
+                    '_ttl'          => $ttl > 0 ? $ttl : ($notExpired && $oldTtl > 0 ? max(0, $oldTtl - ($now - $timestamp)) : 0),
                     '_timestamp'    => $now,
                 ];
                 self::_Set($key, $hash);
@@ -115,10 +116,11 @@ trait HashMethods
             $timestamp = $hash[$hashKey]['_timestamp'] ?? 0;
             if (is_numeric($value)) {
                 $now = time();
-                $value = ($oldTtl <= 0 or (($timestamp + $oldTtl) >= $now)) ? $value : 0;
+                $notExpired = $oldTtl <= 0 or (($timestamp + $oldTtl) >= $now);
+                $value = $notExpired ? $value : 0;
                 $hash[$hashKey] = [
                     '_value'        => $result = $value - $hashValue,
-                    '_ttl'          => ($ttl > 0) ? $ttl : ($timestamp > 0 ? $now - $timestamp : 0),
+                    '_ttl'          => $ttl > 0 ? $ttl : ($notExpired && $oldTtl > 0 ? max(0, $oldTtl - ($now - $timestamp)) : 0),
                     '_timestamp'    => $now,
                 ];
                 self::_Set($key, $hash);
@@ -196,20 +198,18 @@ trait HashMethods
             $key, $func, $params
         ) {
             $hash = self::_Get($key, []);
-            if (isset($hash['_ttl']) and isset($hash['_timestamp'])) {
-                $now = time();
-                $set = false;
-                foreach ($hash as $hashKey => $hashValue) {
-                    $ttl = $hashValue['_ttl'] ?? 0;
-                    $timestamp = $hashValue['_timestamp'] ?? 0;
-                    if ($ttl > 0 and $timestamp > 0 and $timestamp + $ttl < $now) {
-                        $set = true;
-                        unset($hash[$hashKey]);
-                    }
+            $now = time();
+            $set = false;
+            foreach ($hash as $hashKey => $hashValue) {
+                $ttl = $hashValue['_ttl'] ?? 0;
+                $timestamp = $hashValue['_timestamp'] ?? 0;
+                if ($ttl > 0 and $timestamp > 0 and $timestamp + $ttl < $now) {
+                    $set = true;
+                    unset($hash[$hashKey]);
                 }
-                if ($set) {
-                    self::_Set($key, $hash);
-                }
+            }
+            if ($set) {
+                self::_Set($key, $hash);
             }
             return [
                 'timestamp' => microtime(true),
@@ -258,7 +258,7 @@ trait HashMethods
             $ttl = $hashValue['_ttl'] ?? 0;
             $timestamp = $hashValue['_timestamp'] ?? 0;
             if (($ttl <= 0 or (($timestamp + $ttl) >= $now)) and isset($hashValue['_value'])) {
-                if ($regex !== null and preg_match($regex, $key)) {
+                if ($regex !== null and !preg_match($regex, (string)$hashKey)) {
                     continue;
                 }
                 $keys[] = $hashKey;

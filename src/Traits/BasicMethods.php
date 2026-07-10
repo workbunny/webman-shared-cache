@@ -54,6 +54,26 @@ trait BasicMethods
     }
 
     /**
+     * 出让CPU
+     *  - 协程环境使用Timer::sleep出让
+     *  - 非协程环境使用usleep出让
+     *
+     * @param int $microseconds 微秒
+     * @return void
+     */
+    protected static function _yield(int $microseconds = 1000): void
+    {
+        if (
+            class_exists(\Workerman\Coroutine::class) &&
+            \Workerman\Coroutine::isCoroutine()
+        ) {
+            \Workerman\Timer::sleep($microseconds / 1000000);
+        } else {
+            usleep($microseconds);
+        }
+    }
+
+    /**
      * 获取键信息
      *
      * @param string $key
@@ -139,20 +159,44 @@ trait BasicMethods
     {
         $func = __FUNCTION__;
         $result = false;
-        if ($blocking) {
-            $startTime = time();
-            while ($blocking) {
-                // 阻塞保险
-                if (time() >= $startTime + self::$fuse) {
-                    throw new AtomicTimeoutException('Atomic operation timeout');
+        $lock = self::GetLockKey($lockKey);
+        $locked = false;
+        try {
+            if ($blocking) {
+                $startTime = time();
+                while ($blocking) {
+                    // 阻塞保险
+                    if (time() >= $startTime + self::$fuse) {
+                        throw new AtomicTimeoutException('Atomic operation timeout');
+                    }
+                    // 创建锁
+                    apcu_entry($lock, function () use (
+                        $lockKey, $handler, $func, &$result, &$blocking, &$locked
+                    ) {
+                        $locked = true;
+                        $res = call_user_func($handler);
+                        $result = true;
+                        $blocking = false;
+                        return [
+                            'timestamp' => microtime(true),
+                            'method'    => $func,
+                            'params'    => [$lockKey, '\Closure'],
+                            'result'    => $res
+                        ];
+                    });
+                    // 锁未获取时出让CPU
+                    if ($blocking) {
+                        self::_yield();
+                    }
                 }
+            } else {
                 // 创建锁
-                apcu_entry($lock = self::GetLockKey($lockKey), function () use (
-                    $lockKey, $handler, $func, &$result, &$blocking
+                apcu_entry($lock, function () use (
+                    $lockKey, $handler, $func, &$result, &$locked
                 ) {
+                    $locked = true;
                     $res = call_user_func($handler);
                     $result = true;
-                    $blocking = false;
                     return [
                         'timestamp' => microtime(true),
                         'method'    => $func,
@@ -161,23 +205,11 @@ trait BasicMethods
                     ];
                 });
             }
-        } else {
-            // 创建锁
-            apcu_entry($lock = self::GetLockKey($lockKey), function () use (
-                $lockKey, $handler, $func, &$result
-            ) {
-                $res = call_user_func($handler);
-                $result = true;
-                return [
-                    'timestamp' => microtime(true),
-                    'method'    => $func,
-                    'params'    => [$lockKey, '\Closure'],
-                    'result'    => $res
-                ];
-            });
-        }
-        if ($result) {
-            apcu_delete($lock);
+        } finally {
+            // 确保异常时锁被释放
+            if ($locked) {
+                apcu_delete($lock);
+            }
         }
         return $result;
     }
@@ -210,21 +242,20 @@ trait BasicMethods
             while (!apcu_add($key, $value, $ttl)) {
                 // 阻塞保险
                 if (time() >= $startTime + self::$fuse) {return false;}
+                self::_yield();
             }
             return true;
         }
         if (in_array('XX', $optional)) {
             $startTime = time();
-            $blocking = true;
-            while ($blocking) {
-                apcu_entry($key, function () use ($value, &$blocking) {
-                    $blocking = false;
-                    return $value;
-                }, $ttl);
+            while (true) {
+                if (apcu_exists($key)) {
+                    return (bool)apcu_store($key, $value, $ttl);
+                }
                 // 阻塞保险
                 if (time() >= $startTime + self::$fuse) {return false;}
+                self::_yield();
             }
-            return true;
         }
         return (bool)apcu_store($key, $value, $ttl);
     }
